@@ -1,4 +1,4 @@
-# 📘 Aula 4.3 – Deployments
+# 📘 Aula 4.2 – Deployments
 
 ## Aplicando alterações de forma controlada (rollout pause e rollout resume)
 
