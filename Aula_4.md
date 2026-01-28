@@ -1,259 +1,258 @@
-# Aula 4 – Kubernetes: Deployments, Rollout e Restart
+# 📘 Aula 4.2 – Deployments
 
-Nesta aula entramos no **recurso MAIS usado em produção no Kubernetes**: **Deployment**.
-
-Tudo aqui é a **evolução natural** das aulas anteriores (Pod → ReplicaSet → Deployment).
-
-Adaptado para:
-
-* Ubuntu
-* usuário comum
-* kubectl (Docker como runtime já configurado)
+## Scale e Horizontal Pod Autoscaler (HPA)
 
 ---
 
 ## 🎯 Objetivo da aula
 
-* Criar um **Deployment**
-* Entender a relação **Deployment → ReplicaSet → Pods**
-* Monitorar **rollout**
-* Ver status da implantação
-* Usar **rollout restart**
-* Trabalhar com histórico de versões
+* Entender **scale manual (scale in / scale out)**
+* Explorar o **Horizontal Pod Autoscaler (HPA)**
+* Compreender precedência entre **scale manual x HPA**
+* Gerar e reutilizar **manifestos a partir de objetos existentes**
+* Simular um fluxo real de **backup, edição e recriação de recursos**
 
 ---
 
-## 🧠 Conceito-chave (decora isso)
+## 🔧 Pré-requisitos
 
-> **Deployment é o controlador de mais alto nível para aplicações stateless.**
-
-Ele:
-
-* cria ReplicaSets
-* controla Pods
-* permite rollout, rollback e restart
-
-👉 **Em produção você usa Deployment, não Pod nem ReplicaSet direto.**
+* Deployment `my-nginx-app` criado nas aulas anteriores
+* Kubernetes em execução
+* `kubectl` configurado
 
 ---
 
-## 1️⃣ Pré-configuração (simulando a aula)
+## 1️⃣ Preparação e monitoramento
 
-Abra **4 terminais**:
+Organize os terminais e inicie o monitoramento.
 
-### Terminal 1 – Monitorar ReplicaSets
-
-```bash
-kubectl get rs -w
-```
-
-### Terminal 2 – Monitorar Pods
+### Pods
 
 ```bash
+kubectl get pods
 kubectl get pods -w
 ```
 
-### Terminal 3 – Execução dos comandos
-
-### Terminal 4 – Apoio (curl / inspeções)
-
----
-
-## 2️⃣ Criar estrutura de pastas
-
-📌 Aula original:
-
-```
-/root/aplicacoes/deployments/
-```
-
-📌 Adaptado:
+### ReplicaSets
 
 ```bash
-mkdir -p ~/k8s/deployments
-cd ~/k8s/deployments
+kubectl get rs
+kubectl get rs -w
 ```
 
----
-
-## 3️⃣ Criar o manifesto do Deployment (imperativo)
-
-Vamos gerar o YAML usando o kubectl (boa prática):
-
-```bash
-kubectl create deployment my-nginx-app \
-  --image=nginx:1.14.2 \
-  --replicas=3 \
-  --dry-run=client -o yaml > my-nginx-deployment.yaml
-```
-
-📌 O que esse comando faz:
-
-* **create deployment** → cria um Deployment
-* **--image** → imagem do container
-* **--replicas** → quantidade inicial
-* **--dry-run** → não aplica, só gera o YAML
-* **-o yaml** → saída em YAML
-
----
-
-## 4️⃣ Verificar o manifesto criado
-
-```bash
-cat my-nginx-deployment.yaml
-```
-
-📌 Observe:
-
-* `kind: Deployment`
-* `replicas: 3`
-* `template` (mesmo conceito do ReplicaSet)
-
----
-
-## 5️⃣ Aplicar o Deployment
-
-```bash
-kubectl apply -f my-nginx-deployment.yaml
-```
-
-Observe nos terminais:
-
-* Deployment cria um ReplicaSet
-* ReplicaSet cria os Pods
-
----
-
-## 6️⃣ Verificar o status do Rollout
+### Status do Deployment
 
 ```bash
 kubectl rollout status deployment/my-nginx-app
 ```
 
-✅ Indica se a aplicação foi implantada com sucesso.
+📌 **Estado esperado**
+
+* Deployment com 3 réplicas
+* Pods em estado `Running`
 
 ---
 
-## 7️⃣ Inspecionar o Deployment
+## 2️⃣ Scale manual – Scale Out (3 → 5)
 
 ```bash
+kubectl scale deployment/my-nginx-app --replicas=5
+```
+
+### Verificar Pods
+
+```bash
+kubectl get pods
+```
+
+📌 **Resultado esperado**
+
+* 5 Pods em execução
+
+---
+
+## 3️⃣ Scale manual – Scale In (5 → 1)
+
+```bash
+kubectl scale deployment/my-nginx-app --replicas=1
+```
+
+### Verificar Pods e Deployment
+
+```bash
+kubectl get pods
 kubectl get deployment my-nginx-app
-kubectl get deployment my-nginx-app -o wide
-kubectl get deployment my-nginx-app -o wide --show-labels
 ```
+
+📌 **Resultado esperado**
+
+* Apenas 1 Pod ativo
 
 ---
 
-## 8️⃣ Descrever o Deployment
+## 4️⃣ Criando o Horizontal Pod Autoscaler (HPA)
+
+O HPA controla automaticamente o número de réplicas com base no uso de CPU.
 
 ```bash
-kubectl describe deployment my-nginx-app
+kubectl autoscale deployment/my-nginx-app \
+  --min=3 \
+  --max=5 \
+  --cpu-percent=90
 ```
 
-📌 Aqui você vê:
+📌 **Comportamento esperado**
 
-* eventos
-* replicas
-* estratégia de rollout
+* O Deployment passa a manter **mínimo de 3 Pods**
+* Pode escalar automaticamente até **5 Pods**
 
 ---
 
-## 9️⃣ Verificar IPs dos Pods
+## 5️⃣ Testando precedência do HPA
+
+### Tentar escalar manualmente para 4
 
 ```bash
-kubectl get pods -o yaml | grep podIP
+kubectl scale deployment/my-nginx-app --replicas=4
 ```
 
-📌 Cada Pod tem **seu próprio IP** dentro do cluster.
+➡️ O HPA ajusta novamente para o mínimo configurado.
 
----
-
-## 🔟 Verificar versão do Nginx
-
-Escolha um podIP e execute:
+### Tentar escalar para 1
 
 ```bash
-curl -i <POD_IP>
+kubectl scale deployment/my-nginx-app --replicas=1
 ```
 
-Verifique o header:
+📌 **Resultado**
 
-```
-Server: nginx/1.14.2
-```
+* Nada acontece
+* O HPA mantém **3 réplicas**
+
+💡 **Conclusão:**
+
+> Quando existe HPA, ele tem **precedência total** sobre o campo `replicas` do Deployment.
 
 ---
 
-## 1️⃣1️⃣ Histórico de Rollout
+## 6️⃣ Verificando o HPA
 
 ```bash
-kubectl rollout history deployment my-nginx-app
+kubectl get hpa my-nginx-app
 ```
 
 ---
 
-## 1️⃣2️⃣ Anotar causa da mudança
+## 7️⃣ Gerar manifesto do HPA (dry-run)
 
 ```bash
-kubectl annotate deployment/my-nginx-app \
-  kubernetes.io/change-cause="Deploy OK - Nginx version 1.14.2"
+kubectl autoscale deployment/my-nginx-app \
+  --min=3 \
+  --max=5 \
+  --cpu-percent=90 \
+  --dry-run=client -o yaml \
+  > /root/aplicacoes/deployments/my-nginx-hpa.yaml
 ```
 
-Verificar novamente:
+### Ver manifesto
 
 ```bash
-kubectl rollout history deployment my-nginx-app
+vim /root/aplicacoes/deployments/my-nginx-hpa.yaml
 ```
 
 ---
 
-## 1️⃣3️⃣ Rollout Restart
-
-Reiniciar a aplicação sem mudar a imagem:
+## 8️⃣ Backup dos manifestos atuais (Deployment e HPA)
 
 ```bash
-kubectl rollout restart deployment my-nginx-app
+kubectl get deployment my-nginx-app -o yaml \
+  > /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+
+kubectl get hpa my-nginx-app -o yaml \
+  > /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
 ```
 
-Observe:
-
-* novos Pods sendo criados
-* Pods antigos sendo finalizados
+💡 Técnica essencial para **backup e rollback manual**.
 
 ---
 
-## 🧠 Conceitos fixados nesta aula
+## 9️⃣ Remover recursos via comandos imperativos
 
-* Deployment é o **controle principal** da aplicação
-* Rollout acompanha a implantação
-* Restart sem downtime
-* Histórico de versões
-* Relação Deployment → RS → Pods
-
----
-
-## ⚠️ Observação de mercado
-
-* Nunca use `kubectl run` em produção
-* Nunca gerencie Pod direto
-* **Deployment é padrão**
+```bash
+kubectl delete deployment my-nginx-app
+kubectl delete hpa my-nginx-app
+```
 
 ---
 
-## 🔁 Exercício de fixação
+## 🔟 Editar manifestos (versão 2)
 
-1. Crie o Deployment
-2. Observe RS e Pods
-3. Veja rollout status
-4. Faça rollout restart
-5. Consulte o histórico
+### Deployment
 
-Se fizer sem olhar, você está **no nível profissional** ✅
+```bash
+vim /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+```
+
+* Ajustar:
+
+  * `revisionHistoryLimit: 2`
+  * imagem para `nginx:stable-alpine`
+
+### HPA
+
+```bash
+vim /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+```
+
+* Ajustar:
+
+  * `maxReplicas: 12`
 
 ---
 
-## 🔜 Próxima aula
+## 1️⃣1️⃣ Recriar recursos a partir dos manifestos
 
-* Atualização de versão (rollout update)
-* Rollback
-* Estratégias de deployment
+```bash
+kubectl apply -f /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+kubectl apply -f /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+```
+
+### Verificar estado
+
+```bash
+kubectl get deployment
+kubectl get rs
+kubectl get hpa
+```
+
+---
+
+## 1️⃣2️⃣ Limpeza do ambiente usando manifestos
+
+```bash
+kubectl delete -f /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+kubectl delete -f /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+```
+
+### Conferir limpeza
+
+```bash
+kubectl get all
+```
+
+---
+
+## 🧠 Conceitos fixados
+
+* Scale manual altera o campo `replicas`
+* HPA sobrescreve o controle manual
+* HPA trabalha baseado em métricas (CPU)
+* Backup de manifestos é prática profissional
+* Recursos podem ser recriados fielmente via YAML
+
+---
+
+## 🔗 Referências
+
+* HPA – Kubernetes
+* [https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
