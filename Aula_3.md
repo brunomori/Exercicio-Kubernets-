@@ -1,204 +1,244 @@
-# Aula1  – Criando a aplicação **Olá Mundo Container**
+# Aula 3 – Kubernetes: ReplicaSet na prática
 
-Esta versão segue **exatamente o conceito da aula**, mas adaptada para:
+Nesta aula vamos sair do **Pod isolado** e entrar no conceito de **alta disponibilidade** usando **ReplicaSet**.
 
-* Ubuntu
-* usuário comum (sem `/root`)
-* repetição fácil para fixar
-
-Você pode executar **linha por linha** sem erro de permissão.
+Tudo aqui é **adaptado para Ubuntu + usuário comum**, mantendo **100% do conceito da aula original**.
 
 ---
 
-## 🎯 Objetivo
+## 🎯 Objetivo da aula
 
-Criar uma aplicação **Olá Mundo** usando **Nginx em container**, construir a imagem e publicar na porta 8080.
+* Entender o que é um **ReplicaSet**
+* Criar múltiplos Pods automaticamente
+* Observar o comportamento de **auto-recuperação**
+* Escalar réplicas manualmente
+* Encerrar a aplicação corretamente
 
 ---
 
-## 1️⃣ Criar a estrutura de pastas da aplicação
+## 🧠 Conceito rápido (decora isso)
 
-📌 Na aula original:
+> **ReplicaSet garante que X Pods estejam sempre rodando.**
+> Se um Pod morrer, o Kubernetes cria outro.
 
-```
-/root/aplicacoes/container/olamundo/html
-```
+📌 Você **não gerencia Pods diretamente** — o ReplicaSet faz isso por você.
 
-📌 Adaptado para sua realidade:
+---
+
+## 1️⃣ Pré-configuração (simulando a aula)
+
+📌 A aula pede vários terminais. No Ubuntu, a ideia é a mesma.
+
+### Terminal 1 – Monitorar Pods (deixe aberto)
 
 ```bash
-mkdir -p ~/app_container/olamundo/html
-cd ~/app_container/olamundo
+kubectl get pods -w
+```
+
+### Terminal 2 – Executar os comandos
+
+Use este para os próximos passos.
+
+---
+
+## 2️⃣ Criar a estrutura de pastas
+
+📌 Aula original:
+
+```
+/root/aplicacoes/replicasets/
+```
+
+📌 Adaptado:
+
+```bash
+mkdir -p ~/k8s/replicasets
+cd ~/k8s/replicasets
 ```
 
 Conferir:
 
 ```bash
 pwd
-ls -R
+ls -l
 ```
 
 ---
 
-## 2️⃣ Criar o arquivo `index.html`
-
-📌 Comando adaptado:
+## 3️⃣ Criar o manifesto do ReplicaSet
 
 ```bash
-cat > html/index.html << EOF
-<html>
- <head>
-  <title>
-   Olá Mundo Container!!!
-  </title>
- </head>
- <body style="background-color: blue;">
-  <h1 style="color: white">Olá Mundo Container!!!</h1>
- </body>
-</html>
+cat > my-app-rs.yaml << EOF
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: my-app
+  labels:
+    app: my-app
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: my-app
+        image: nginx
 EOF
-```
-
-Verificar se foi criado corretamente:
-
-```bash
-cat html/index.html
 ```
 
 ---
 
-## 3️⃣ Criar o Dockerfile (definição da imagem)
-
-📌 Comando adaptado:
+## 4️⃣ Conferir o manifesto
 
 ```bash
-cat > Dockerfile << EOF
-FROM nginx
-COPY html /usr/share/nginx/html
-EOF
+cat my-app-rs.yaml
+```
+
+📌 Esse arquivo define **estado desejado**: 3 Pods Nginx.
+
+---
+
+## 5️⃣ Aplicar o ReplicaSet
+
+```bash
+kubectl apply -f my-app-rs.yaml
+```
+
+Observe no terminal de monitoramento:
+
+* Pods sendo criados automaticamente
+
+---
+
+## 6️⃣ Listar ReplicaSets
+
+```bash
+kubectl get rs
+```
+
+---
+
+## 7️⃣ Teste de auto-recuperação (ESSENCIAL)
+
+Apague **um Pod** manualmente:
+
+```bash
+kubectl delete pod <nome-de-um-pod>
+```
+
+🔍 O que acontece:
+
+* O ReplicaSet detecta
+* Um **novo Pod é criado automaticamente**
+
+👉 Esse é o coração do Kubernetes.
+
+---
+
+## 8️⃣ Escalar a aplicação (3 → 5 réplicas)
+
+Editar o ReplicaSet:
+
+```bash
+kubectl edit rs my-app
+```
+
+Altere:
+
+```yaml
+replicas: 5
+```
+
+Salvar e sair.
+
+Observe os novos Pods surgindo.
+
+---
+
+## 9️⃣ Desligar a aplicação (réplicas = 0)
+
+Editar novamente:
+
+```bash
+kubectl edit rs my-app
+```
+
+Alterar para:
+
+```yaml
+replicas: 0
+```
+
+Resultado:
+
+* Todos os Pods são encerrados
+
+---
+
+## 🔟 Limpeza do ambiente
+
+Excluir o ReplicaSet:
+
+```bash
+kubectl delete rs my-app
 ```
 
 Conferir:
 
 ```bash
-cat Dockerfile
+kubectl get rs
+kubectl get pods
 ```
 
 ---
 
-## 4️⃣ Construir a imagem do container (Docker)
+## 🧠 Conceitos fixados nesta aula
 
-```bash
-docker build -t k8s4dev/ola-mundo-container-image:1.0.0 .
-```
-
-Listar imagens:
-
-```bash
-docker images
-```
+* ReplicaSet mantém **quantidade desejada de Pods**
+* Auto-healing (auto-recuperação)
+* Escalabilidade manual
+* Pods são **descartáveis**
+* YAML define o estado desejado
 
 ---
 
-### 🔹 (Opcional) Usando **Podman** (igual à aula)
+## ⚠️ Observação importante (nível mercado)
 
-Se você estiver usando Podman:
+👉 **Não se usa ReplicaSet direto em produção.**
 
-```bash
-podman build -t k8s4dev/ola-mundo-container-image:1.0.0 .
-```
+Quem cria ReplicaSet automaticamente é o:
 
-Listar imagens:
+* **Deployment** ✅ (próxima aula)
 
-```bash
-podman image ls
-```
+ReplicaSet é importante para:
 
----
-
-## 5️⃣ Executar o container (Docker)
-
-```bash
-docker run --name k8s4dev-ola-mundo-container -d -p 8080:80 k8s4dev/ola-mundo-container-image:1.0.0
-```
-
-Verificar se está rodando:
-
-```bash
-docker ps
-```
+* entender o funcionamento interno
+* prova / certificação
+* base conceitual
 
 ---
 
-## 6️⃣ Acessar a aplicação no navegador
+## 🔁 Exercício de fixação
 
-No **mesmo computador**:
+1. Crie o ReplicaSet
+2. Apague Pods
+3. Escale para 5
+4. Reduza para 0
+5. Delete o RS
 
-```
-http://localhost:8080
-```
-
-Você deve ver:
-
-> **Olá Mundo Container!!!**
+Se fizer sem olhar, você **entendeu Kubernetes de verdade** 🚀
 
 ---
 
-## 7️⃣ Comandos básicos (fixação)
+## 🔜 Próxima aula
 
-### Listar containers
-
-```bash
-docker ps
-```
-
-### Listar imagens
-
-```bash
-docker images
-```
-
-### Parar container
-
-```bash
-docker stop k8s4dev-ola-mundo-container
-```
-
-### Remover container
-
-```bash
-docker rm -f k8s4dev-ola-mundo-container
-```
-
-### Remover imagem
-
-```bash
-docker rmi k8s4dev/ola-mundo-container-image:1.0.0
-```
-
----
-
-## 🧠 Conceitos que você fixou
-
-* Estrutura de aplicação em container
-* `Dockerfile` como definição da imagem
-* `COPY` levando arquivos para dentro da imagem
-* Diferença entre **imagem** e **container**
-* Publicação de porta (`8080:80`)
-
----
-
-## 🔁 Exercício de repetição (ESSENCIAL)
-
-1. Apague tudo:
-
-```bash
-rm -rf ~/app_container
-```
-
-2. Refaça **sem copiar**
-3. Mude o HTML
-4. Rebuild a imagem
-5. Rode novamente
-
-Se conseguir fazer sem consultar, **o conceito está sólido** ✅
+* Deployment
+* Rollout
+* Rollback
+* Versionamento de aplicação
