@@ -86,9 +86,7 @@ cat Dockerfile
 
 ---
 
-## 4️⃣ Construir a imagem do container
-
-### 🔹 Usando **Docker** (mais comum no Ubuntu)
+## 4️⃣ Construir a imagem do container (Docker)
 
 ```bash
 docker build -t k8s4dev/ola-mundo-container-image:1.0.0 .
@@ -118,26 +116,16 @@ podman image ls
 
 ---
 
-## 5️⃣ Executar o container
-
-### Docker:
+## 5️⃣ Executar o container (Docker)
 
 ```bash
 docker run --name k8s4dev-ola-mundo-container -d -p 8080:80 k8s4dev/ola-mundo-container-image:1.0.0
-```
-
-### Podman:
-
-```bash
-podman run --name k8s4dev-ola-mundo-container -d -p 8080:80 k8s4dev/ola-mundo-container-image:1.0.0
 ```
 
 Verificar se está rodando:
 
 ```bash
 docker ps
-# ou
-podman ps
 ```
 
 ---
@@ -162,27 +150,30 @@ Você deve ver:
 
 ```bash
 docker ps
-podman ps
+```
+
+### Listar imagens
+
+```bash
+docker images
 ```
 
 ### Parar container
 
 ```bash
 docker stop k8s4dev-ola-mundo-container
-podman stop k8s4dev-ola-mundo-container
 ```
 
 ### Remover container
 
 ```bash
 docker rm -f k8s4dev-ola-mundo-container
-podman rm -f k8s4dev-ola-mundo-container
 ```
 
-### Limpeza geral (⚠️ cuidado)
+### Remover imagem
 
 ```bash
-podman system reset
+docker rmi k8s4dev/ola-mundo-container-image:1.0.0
 ```
 
 ---
@@ -191,7 +182,7 @@ podman system reset
 
 * Estrutura de aplicação em container
 * `Dockerfile` como definição da imagem
-* `COPY` levando arquivos para dentro do container
+* `COPY` levando arquivos para dentro da imagem
 * Diferença entre **imagem** e **container**
 * Publicação de porta (`8080:80`)
 
