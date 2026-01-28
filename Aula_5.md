@@ -1,257 +1,218 @@
-# Aula 2 – Kubernetes Básico: Pods com Nginx
-
-Esta aula dá continuidade ao **conceito de containers**, agora no **Kubernetes**, criando nosso **primeiro Pod** com Nginx.
-
-Adaptado para:
-
-* Ubuntu
-* usuário comum (sem `/root`)
-* Kubernetes local (k3s, kind, minikube, etc.)
+# 📘 Aula 5 – Namespaces
 
 ---
 
 ## 🎯 Objetivo da aula
 
-* Verificar se o Kubernetes está rodando
-* Criar um **Pod** usando `kubectl run`
-* Inspecionar o Pod
-* Entender por que ele **não é acessível externamente**
-* Usar `port-forward` (debug)
-* Criar o **manifesto YAML** do Pod
+* Entender o que são **Namespaces** no Kubernetes
+* Explorar o **Namespace default**
+* Criar e utilizar **namespaces personalizados**
+* Aprender a alternar o **namespace padrão do contexto atual**
+* Entender quais recursos são **namespaced** e quais são **globais**
 
 ---
 
-## 1️⃣ Verificar se o Kubernetes está rodando
+## 🔧 Conceito rápido
 
-Listar os nodes do cluster:
+Namespaces servem para **organizar, isolar e segmentar recursos** dentro de um cluster Kubernetes.
+
+Eles são muito usados para separar:
+
+* ambientes (dev, hml, prod)
+* times
+* aplicações
+
+---
+
+## 1️⃣ Listando os Namespaces existentes
 
 ```bash
-kubectl get nodes
+kubectl get namespace
+kubectl get ns
 ```
 
-✅ Resultado esperado:
+📌 **Resultado esperado**
 
-* Pelo menos **1 node**
-* Status: **Ready**
+* Lista de namespaces como `default`, `kube-system`, `kube-public`, etc.
 
 ---
 
-## 2️⃣ Verificar o namespace default
+## 2️⃣ Explorando o Namespace default
 
-Checar se não há pods rodando:
+### Obter informações básicas
+
+```bash
+kubectl get ns default
+```
+
+### Descrever o namespace
+
+```bash
+kubectl describe ns default
+```
+
+### Visualizar o manifesto YAML
+
+```bash
+kubectl get ns default -o yaml
+```
+
+📌 Observe atributos como:
+
+* `metadata.name`
+* `status.phase`
+
+---
+
+## 3️⃣ Criando um novo Namespace
+
+Vamos criar um namespace chamado `dev`.
+
+```bash
+kubectl create ns dev
+```
+
+### Verificar criação
+
+```bash
+kubectl get ns
+```
+
+---
+
+## 4️⃣ Criando um Pod no namespace dev
+
+Criar um Pod nginx utilizando o namespace `dev`.
+
+```bash
+kubectl run nginx --image=nginx -n dev
+```
+
+---
+
+## 5️⃣ Listando Pods (namespace default)
 
 ```bash
 kubectl get pods
 ```
 
-✅ Resultado esperado:
+📌 **Resultado esperado**
 
-```
-No resources found in default namespace.
-```
+* Nenhum Pod listado
 
----
-
-## 3️⃣ Criar o Pod Nginx (imperativo)
-
-Criar o pod usando a imagem oficial do Docker Hub:
-
-```bash
-kubectl run nginx-run-pod --image=nginx
-```
-
-Verificar o status:
-
-```bash
-kubectl get pod nginx-run-pod
-```
-
-Quando o STATUS for **Running**, o pod está ativo.
+➡️ Isso acontece porque o Pod foi criado no namespace `dev`, não no `default`.
 
 ---
 
-## 4️⃣ Inspecionar o Pod
+## 6️⃣ Acessando recursos em outro Namespace
 
-### Ver detalhes em YAML:
-
-```bash
-kubectl get pod nginx-run-pod -o yaml
-```
-
-### Obter o IP do Pod:
+### Listar Pod no namespace dev
 
 ```bash
-kubectl get pod nginx-run-pod -o yaml | grep IP
+kubectl get pod nginx -n dev
 ```
 
-Exemplo:
-
-```
-podIP: 10.42.0.3
-```
-
----
-
-## 5️⃣ Acessar o Nginx pelo IP do Pod (teste interno)
+### Visualizar YAML do Pod
 
 ```bash
-curl 10.42.0.3
+kubectl get pod nginx -n dev -o yaml
 ```
 
-✅ Resultado esperado: Página padrão do **Welcome to nginx!**
-
-📌 Isso funciona porque:
-
-* O acesso acontece **dentro do cluster**
-
----
-
-## 6️⃣ Tentar acessar pelo IP da máquina (falha esperada)
-
-```bash
-curl 192.168.0.32
-```
-
-❌ Resultado esperado:
-
-```
-curl: (7) Failed to connect to 192.168.0.32 port 80: Connection refused
-```
-
-📌 O Pod **não está exposto externamente**.
-
----
-
-## 7️⃣ Expor o Pod com port-forward (DEBUG)
-
-```bash
-kubectl port-forward pod/nginx-run-pod :80 --address=0.0.0.0
-```
-
-Exemplo de saída:
-
-```
-Forwarding from 0.0.0.0:39495 -> 80
-```
-
----
-
-## 8️⃣ Acessar no navegador
-
-Abra no browser:
-
-```
-http://IP_DA_SUA_MAQUINA:39495
-```
-
-Você verá:
-
-> **Welcome to nginx!**
-
-⚠️ IMPORTANTE:
-
-* `port-forward` é **apenas para debug e desenvolvimento**
-* Não é solução de produção
-
----
-
-## 9️⃣ Deletar o Pod
-
-```bash
-kubectl delete pod nginx-run-pod
-```
-
-Verificar:
-
-```bash
-kubectl get pods
-```
-
----
-
-## 🔟 Manifesto YAML do Pod
-
-Este é o manifesto equivalente ao `kubectl run`:
+📌 Observe o campo:
 
 ```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    run: nginx-run-pod
-  name: nginx-run-pod
-spec:
-  containers:
-  - image: nginx
-    name: nginx-run-pod
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
+namespace: dev
 ```
 
 ---
 
-## 1️⃣1️⃣ Criar o arquivo YAML do Pod (adaptado)
+## 7️⃣ Configurando namespace padrão do contexto atual
 
-Criar diretório para manifests:
+Quando estamos debugando aplicações fora do `default`, é comum esquecer a flag `-n`.
+
+Vamos configurar o contexto atual para usar `dev` como namespace padrão.
 
 ```bash
-mkdir -p ~/k8s/pods
+kubectl config set-context --current --namespace=dev
 ```
 
-Criar o arquivo:
+### Verificar configuração
 
 ```bash
-cat > ~/k8s/pods/nginx-run-pod.yaml << EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    run: nginx-run-pod
-  name: nginx-run-pod
-spec:
-  containers:
-  - image: nginx
-    name: nginx-run-pod
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
-EOF
+kubectl config view | grep namespace
 ```
 
-Aplicar o manifesto:
+### Listar Pods novamente
 
 ```bash
-kubectl apply -f ~/k8s/pods/nginx-run-pod.yaml
+kubectl get pods
+```
+
+📌 Agora o Pod nginx aparece sem precisar informar `-n dev`.
+
+---
+
+## 8️⃣ Revertendo para o namespace default
+
+```bash
+kubectl config set-context --current --namespace=default
 ```
 
 ---
 
-## 🧠 Conceitos fixados nesta aula
+## 9️⃣ Limpeza do ambiente
 
-* Pod = **menor unidade do Kubernetes**
-* Pod ≠ Container (pode ter mais de um)
-* `kubectl run` cria **1 instância**
-* Pod não é acessível externamente por padrão
-* `port-forward` é solução **temporária**
-* YAML é a forma declarativa (produção)
+### Remover Pod do namespace dev
 
----
+```bash
+kubectl delete pod nginx -n dev
+```
 
-## 🔁 Exercício de fixação (obrigatório)
+### Remover Namespace dev
 
-1. Delete o pod
-2. Recrie com `kubectl run`
-3. Delete novamente
-4. Crie usando o YAML
-5. Use `port-forward`
+```bash
+kubectl delete ns dev
+```
 
-Se fizer sem olhar, o conceito está sólido ✅
+⚠️ **Atenção**
+
+> Deletar um namespace remove **TODOS os recursos dentro dele**.
+> Evite este comando em ambientes produtivos.
 
 ---
 
-## 🔜 Próxima aula
+## 🔟 Recursos namespaced vs globais
 
-* Deployments (réplicas)
-* Alta disponibilidade
-* Exposição correta com **Service**
+### Listar recursos que fazem parte de um namespace
+
+```bash
+kubectl api-resources --namespaced=true
+```
+
+### Listar recursos globais (não namespaced)
+
+```bash
+kubectl api-resources --namespaced=false
+```
+
+📌 Exemplos:
+
+* **Namespaced**: Pod, Service, Deployment, ConfigMap, Secret
+* **Globais**: Node, Namespace, PersistentVolume
+
+---
+
+## 🧠 Conceitos fixados
+
+* Namespace isola recursos logicamente
+* O namespace padrão é `default`
+* O contexto atual define o namespace padrão
+* Nem todos os recursos pertencem a namespaces
+* Deletar um namespace apaga tudo dentro dele
+
+---
+
+## 🔗 Referência oficial
+
+* Kubernetes Namespaces
+* [https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
