@@ -1,257 +1,259 @@
-# Aula 2 – Kubernetes Básico: Pods com Nginx
+# Aula 4 – Kubernetes: Deployments, Rollout e Restart
 
-Esta aula dá continuidade ao **conceito de containers**, agora no **Kubernetes**, criando nosso **primeiro Pod** com Nginx.
+Nesta aula entramos no **recurso MAIS usado em produção no Kubernetes**: **Deployment**.
+
+Tudo aqui é a **evolução natural** das aulas anteriores (Pod → ReplicaSet → Deployment).
 
 Adaptado para:
 
 * Ubuntu
-* usuário comum (sem `/root`)
-* Kubernetes local (k3s, kind, minikube, etc.)
+* usuário comum
+* kubectl (Docker como runtime já configurado)
 
 ---
 
 ## 🎯 Objetivo da aula
 
-* Verificar se o Kubernetes está rodando
-* Criar um **Pod** usando `kubectl run`
-* Inspecionar o Pod
-* Entender por que ele **não é acessível externamente**
-* Usar `port-forward` (debug)
-* Criar o **manifesto YAML** do Pod
+* Criar um **Deployment**
+* Entender a relação **Deployment → ReplicaSet → Pods**
+* Monitorar **rollout**
+* Ver status da implantação
+* Usar **rollout restart**
+* Trabalhar com histórico de versões
 
 ---
 
-## 1️⃣ Verificar se o Kubernetes está rodando
+## 🧠 Conceito-chave (decora isso)
 
-Listar os nodes do cluster:
+> **Deployment é o controlador de mais alto nível para aplicações stateless.**
 
-```bash
-kubectl get nodes
-```
+Ele:
 
-✅ Resultado esperado:
+* cria ReplicaSets
+* controla Pods
+* permite rollout, rollback e restart
 
-* Pelo menos **1 node**
-* Status: **Ready**
-
----
-
-## 2️⃣ Verificar o namespace default
-
-Checar se não há pods rodando:
-
-```bash
-kubectl get pods
-```
-
-✅ Resultado esperado:
-
-```
-No resources found in default namespace.
-```
+👉 **Em produção você usa Deployment, não Pod nem ReplicaSet direto.**
 
 ---
 
-## 3️⃣ Criar o Pod Nginx (imperativo)
+## 1️⃣ Pré-configuração (simulando a aula)
 
-Criar o pod usando a imagem oficial do Docker Hub:
+Abra **4 terminais**:
 
-```bash
-kubectl run nginx-run-pod --image=nginx
-```
-
-Verificar o status:
+### Terminal 1 – Monitorar ReplicaSets
 
 ```bash
-kubectl get pod nginx-run-pod
+kubectl get rs -w
 ```
 
-Quando o STATUS for **Running**, o pod está ativo.
+### Terminal 2 – Monitorar Pods
+
+```bash
+kubectl get pods -w
+```
+
+### Terminal 3 – Execução dos comandos
+
+### Terminal 4 – Apoio (curl / inspeções)
 
 ---
 
-## 4️⃣ Inspecionar o Pod
+## 2️⃣ Criar estrutura de pastas
 
-### Ver detalhes em YAML:
+📌 Aula original:
+
+```
+/root/aplicacoes/deployments/
+```
+
+📌 Adaptado:
 
 ```bash
-kubectl get pod nginx-run-pod -o yaml
-```
-
-### Obter o IP do Pod:
-
-```bash
-kubectl get pod nginx-run-pod -o yaml | grep IP
-```
-
-Exemplo:
-
-```
-podIP: 10.42.0.3
+mkdir -p ~/k8s/deployments
+cd ~/k8s/deployments
 ```
 
 ---
 
-## 5️⃣ Acessar o Nginx pelo IP do Pod (teste interno)
+## 3️⃣ Criar o manifesto do Deployment (imperativo)
+
+Vamos gerar o YAML usando o kubectl (boa prática):
 
 ```bash
-curl 10.42.0.3
+kubectl create deployment my-nginx-app \
+  --image=nginx:1.14.2 \
+  --replicas=3 \
+  --dry-run=client -o yaml > my-nginx-deployment.yaml
 ```
 
-✅ Resultado esperado: Página padrão do **Welcome to nginx!**
+📌 O que esse comando faz:
 
-📌 Isso funciona porque:
-
-* O acesso acontece **dentro do cluster**
+* **create deployment** → cria um Deployment
+* **--image** → imagem do container
+* **--replicas** → quantidade inicial
+* **--dry-run** → não aplica, só gera o YAML
+* **-o yaml** → saída em YAML
 
 ---
 
-## 6️⃣ Tentar acessar pelo IP da máquina (falha esperada)
+## 4️⃣ Verificar o manifesto criado
 
 ```bash
-curl 192.168.0.32
+cat my-nginx-deployment.yaml
 ```
 
-❌ Resultado esperado:
+📌 Observe:
 
-```
-curl: (7) Failed to connect to 192.168.0.32 port 80: Connection refused
-```
-
-📌 O Pod **não está exposto externamente**.
+* `kind: Deployment`
+* `replicas: 3`
+* `template` (mesmo conceito do ReplicaSet)
 
 ---
 
-## 7️⃣ Expor o Pod com port-forward (DEBUG)
+## 5️⃣ Aplicar o Deployment
 
 ```bash
-kubectl port-forward pod/nginx-run-pod :80 --address=0.0.0.0
+kubectl apply -f my-nginx-deployment.yaml
 ```
 
-Exemplo de saída:
+Observe nos terminais:
 
-```
-Forwarding from 0.0.0.0:39495 -> 80
-```
+* Deployment cria um ReplicaSet
+* ReplicaSet cria os Pods
 
 ---
 
-## 8️⃣ Acessar no navegador
+## 6️⃣ Verificar o status do Rollout
 
-Abra no browser:
-
-```
-http://IP_DA_SUA_MAQUINA:39495
+```bash
+kubectl rollout status deployment/my-nginx-app
 ```
 
-Você verá:
-
-> **Welcome to nginx!**
-
-⚠️ IMPORTANTE:
-
-* `port-forward` é **apenas para debug e desenvolvimento**
-* Não é solução de produção
+✅ Indica se a aplicação foi implantada com sucesso.
 
 ---
 
-## 9️⃣ Deletar o Pod
+## 7️⃣ Inspecionar o Deployment
 
 ```bash
-kubectl delete pod nginx-run-pod
-```
-
-Verificar:
-
-```bash
-kubectl get pods
+kubectl get deployment my-nginx-app
+kubectl get deployment my-nginx-app -o wide
+kubectl get deployment my-nginx-app -o wide --show-labels
 ```
 
 ---
 
-## 🔟 Manifesto YAML do Pod
+## 8️⃣ Descrever o Deployment
 
-Este é o manifesto equivalente ao `kubectl run`:
+```bash
+kubectl describe deployment my-nginx-app
+```
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    run: nginx-run-pod
-  name: nginx-run-pod
-spec:
-  containers:
-  - image: nginx
-    name: nginx-run-pod
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
+📌 Aqui você vê:
+
+* eventos
+* replicas
+* estratégia de rollout
+
+---
+
+## 9️⃣ Verificar IPs dos Pods
+
+```bash
+kubectl get pods -o yaml | grep podIP
+```
+
+📌 Cada Pod tem **seu próprio IP** dentro do cluster.
+
+---
+
+## 🔟 Verificar versão do Nginx
+
+Escolha um podIP e execute:
+
+```bash
+curl -i <POD_IP>
+```
+
+Verifique o header:
+
+```
+Server: nginx/1.14.2
 ```
 
 ---
 
-## 1️⃣1️⃣ Criar o arquivo YAML do Pod (adaptado)
-
-Criar diretório para manifests:
+## 1️⃣1️⃣ Histórico de Rollout
 
 ```bash
-mkdir -p ~/k8s/pods
+kubectl rollout history deployment my-nginx-app
 ```
 
-Criar o arquivo:
+---
+
+## 1️⃣2️⃣ Anotar causa da mudança
 
 ```bash
-cat > ~/k8s/pods/nginx-run-pod.yaml << EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    run: nginx-run-pod
-  name: nginx-run-pod
-spec:
-  containers:
-  - image: nginx
-    name: nginx-run-pod
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
-EOF
+kubectl annotate deployment/my-nginx-app \
+  kubernetes.io/change-cause="Deploy OK - Nginx version 1.14.2"
 ```
 
-Aplicar o manifesto:
+Verificar novamente:
 
 ```bash
-kubectl apply -f ~/k8s/pods/nginx-run-pod.yaml
+kubectl rollout history deployment my-nginx-app
 ```
+
+---
+
+## 1️⃣3️⃣ Rollout Restart
+
+Reiniciar a aplicação sem mudar a imagem:
+
+```bash
+kubectl rollout restart deployment my-nginx-app
+```
+
+Observe:
+
+* novos Pods sendo criados
+* Pods antigos sendo finalizados
 
 ---
 
 ## 🧠 Conceitos fixados nesta aula
 
-* Pod = **menor unidade do Kubernetes**
-* Pod ≠ Container (pode ter mais de um)
-* `kubectl run` cria **1 instância**
-* Pod não é acessível externamente por padrão
-* `port-forward` é solução **temporária**
-* YAML é a forma declarativa (produção)
+* Deployment é o **controle principal** da aplicação
+* Rollout acompanha a implantação
+* Restart sem downtime
+* Histórico de versões
+* Relação Deployment → RS → Pods
 
 ---
 
-## 🔁 Exercício de fixação (obrigatório)
+## ⚠️ Observação de mercado
 
-1. Delete o pod
-2. Recrie com `kubectl run`
-3. Delete novamente
-4. Crie usando o YAML
-5. Use `port-forward`
+* Nunca use `kubectl run` em produção
+* Nunca gerencie Pod direto
+* **Deployment é padrão**
 
-Se fizer sem olhar, o conceito está sólido ✅
+---
+
+## 🔁 Exercício de fixação
+
+1. Crie o Deployment
+2. Observe RS e Pods
+3. Veja rollout status
+4. Faça rollout restart
+5. Consulte o histórico
+
+Se fizer sem olhar, você está **no nível profissional** ✅
 
 ---
 
 ## 🔜 Próxima aula
 
-* Deployments (réplicas)
-* Alta disponibilidade
-* Exposição correta com **Service**
+* Atualização de versão (rollout update)
+* Rollback
+* Estratégias de deployment
