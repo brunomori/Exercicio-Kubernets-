@@ -1,257 +1,258 @@
-# Aula 2 – Kubernetes Básico: Pods com Nginx
+# 📘 Aula 4.2 – Deployments
 
-Esta aula dá continuidade ao **conceito de containers**, agora no **Kubernetes**, criando nosso **primeiro Pod** com Nginx.
-
-Adaptado para:
-
-* Ubuntu
-* usuário comum (sem `/root`)
-* Kubernetes local (k3s, kind, minikube, etc.)
+## Scale e Horizontal Pod Autoscaler (HPA)
 
 ---
 
 ## 🎯 Objetivo da aula
 
-* Verificar se o Kubernetes está rodando
-* Criar um **Pod** usando `kubectl run`
-* Inspecionar o Pod
-* Entender por que ele **não é acessível externamente**
-* Usar `port-forward` (debug)
-* Criar o **manifesto YAML** do Pod
+* Entender **scale manual (scale in / scale out)**
+* Explorar o **Horizontal Pod Autoscaler (HPA)**
+* Compreender precedência entre **scale manual x HPA**
+* Gerar e reutilizar **manifestos a partir de objetos existentes**
+* Simular um fluxo real de **backup, edição e recriação de recursos**
 
 ---
 
-## 1️⃣ Verificar se o Kubernetes está rodando
+## 🔧 Pré-requisitos
 
-Listar os nodes do cluster:
+* Deployment `my-nginx-app` criado nas aulas anteriores
+* Kubernetes em execução
+* `kubectl` configurado
+
+---
+
+## 1️⃣ Preparação e monitoramento
+
+Organize os terminais e inicie o monitoramento.
+
+### Pods
 
 ```bash
-kubectl get nodes
+kubectl get pods
+kubectl get pods -w
 ```
 
-✅ Resultado esperado:
+### ReplicaSets
 
-* Pelo menos **1 node**
-* Status: **Ready**
+```bash
+kubectl get rs
+kubectl get rs -w
+```
+
+### Status do Deployment
+
+```bash
+kubectl rollout status deployment/my-nginx-app
+```
+
+📌 **Estado esperado**
+
+* Deployment com 3 réplicas
+* Pods em estado `Running`
 
 ---
 
-## 2️⃣ Verificar o namespace default
+## 2️⃣ Scale manual – Scale Out (3 → 5)
 
-Checar se não há pods rodando:
+```bash
+kubectl scale deployment/my-nginx-app --replicas=5
+```
+
+### Verificar Pods
 
 ```bash
 kubectl get pods
 ```
 
-✅ Resultado esperado:
+📌 **Resultado esperado**
 
-```
-No resources found in default namespace.
-```
+* 5 Pods em execução
 
 ---
 
-## 3️⃣ Criar o Pod Nginx (imperativo)
-
-Criar o pod usando a imagem oficial do Docker Hub:
+## 3️⃣ Scale manual – Scale In (5 → 1)
 
 ```bash
-kubectl run nginx-run-pod --image=nginx
+kubectl scale deployment/my-nginx-app --replicas=1
 ```
 
-Verificar o status:
-
-```bash
-kubectl get pod nginx-run-pod
-```
-
-Quando o STATUS for **Running**, o pod está ativo.
-
----
-
-## 4️⃣ Inspecionar o Pod
-
-### Ver detalhes em YAML:
-
-```bash
-kubectl get pod nginx-run-pod -o yaml
-```
-
-### Obter o IP do Pod:
-
-```bash
-kubectl get pod nginx-run-pod -o yaml | grep IP
-```
-
-Exemplo:
-
-```
-podIP: 10.42.0.3
-```
-
----
-
-## 5️⃣ Acessar o Nginx pelo IP do Pod (teste interno)
-
-```bash
-curl 10.42.0.3
-```
-
-✅ Resultado esperado: Página padrão do **Welcome to nginx!**
-
-📌 Isso funciona porque:
-
-* O acesso acontece **dentro do cluster**
-
----
-
-## 6️⃣ Tentar acessar pelo IP da máquina (falha esperada)
-
-```bash
-curl 192.168.0.32
-```
-
-❌ Resultado esperado:
-
-```
-curl: (7) Failed to connect to 192.168.0.32 port 80: Connection refused
-```
-
-📌 O Pod **não está exposto externamente**.
-
----
-
-## 7️⃣ Expor o Pod com port-forward (DEBUG)
-
-```bash
-kubectl port-forward pod/nginx-run-pod :80 --address=0.0.0.0
-```
-
-Exemplo de saída:
-
-```
-Forwarding from 0.0.0.0:39495 -> 80
-```
-
----
-
-## 8️⃣ Acessar no navegador
-
-Abra no browser:
-
-```
-http://IP_DA_SUA_MAQUINA:39495
-```
-
-Você verá:
-
-> **Welcome to nginx!**
-
-⚠️ IMPORTANTE:
-
-* `port-forward` é **apenas para debug e desenvolvimento**
-* Não é solução de produção
-
----
-
-## 9️⃣ Deletar o Pod
-
-```bash
-kubectl delete pod nginx-run-pod
-```
-
-Verificar:
+### Verificar Pods e Deployment
 
 ```bash
 kubectl get pods
+kubectl get deployment my-nginx-app
 ```
+
+📌 **Resultado esperado**
+
+* Apenas 1 Pod ativo
 
 ---
 
-## 🔟 Manifesto YAML do Pod
+## 4️⃣ Criando o Horizontal Pod Autoscaler (HPA)
 
-Este é o manifesto equivalente ao `kubectl run`:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    run: nginx-run-pod
-  name: nginx-run-pod
-spec:
-  containers:
-  - image: nginx
-    name: nginx-run-pod
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
-```
-
----
-
-## 1️⃣1️⃣ Criar o arquivo YAML do Pod (adaptado)
-
-Criar diretório para manifests:
+O HPA controla automaticamente o número de réplicas com base no uso de CPU.
 
 ```bash
-mkdir -p ~/k8s/pods
+kubectl autoscale deployment/my-nginx-app \
+  --min=3 \
+  --max=5 \
+  --cpu-percent=90
 ```
 
-Criar o arquivo:
+📌 **Comportamento esperado**
+
+* O Deployment passa a manter **mínimo de 3 Pods**
+* Pode escalar automaticamente até **5 Pods**
+
+---
+
+## 5️⃣ Testando precedência do HPA
+
+### Tentar escalar manualmente para 4
 
 ```bash
-cat > ~/k8s/pods/nginx-run-pod.yaml << EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    run: nginx-run-pod
-  name: nginx-run-pod
-spec:
-  containers:
-  - image: nginx
-    name: nginx-run-pod
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
-EOF
+kubectl scale deployment/my-nginx-app --replicas=4
 ```
 
-Aplicar o manifesto:
+➡️ O HPA ajusta novamente para o mínimo configurado.
+
+### Tentar escalar para 1
 
 ```bash
-kubectl apply -f ~/k8s/pods/nginx-run-pod.yaml
+kubectl scale deployment/my-nginx-app --replicas=1
+```
+
+📌 **Resultado**
+
+* Nada acontece
+* O HPA mantém **3 réplicas**
+
+💡 **Conclusão:**
+
+> Quando existe HPA, ele tem **precedência total** sobre o campo `replicas` do Deployment.
+
+---
+
+## 6️⃣ Verificando o HPA
+
+```bash
+kubectl get hpa my-nginx-app
 ```
 
 ---
 
-## 🧠 Conceitos fixados nesta aula
+## 7️⃣ Gerar manifesto do HPA (dry-run)
 
-* Pod = **menor unidade do Kubernetes**
-* Pod ≠ Container (pode ter mais de um)
-* `kubectl run` cria **1 instância**
-* Pod não é acessível externamente por padrão
-* `port-forward` é solução **temporária**
-* YAML é a forma declarativa (produção)
+```bash
+kubectl autoscale deployment/my-nginx-app \
+  --min=3 \
+  --max=5 \
+  --cpu-percent=90 \
+  --dry-run=client -o yaml \
+  > /root/aplicacoes/deployments/my-nginx-hpa.yaml
+```
 
----
+### Ver manifesto
 
-## 🔁 Exercício de fixação (obrigatório)
-
-1. Delete o pod
-2. Recrie com `kubectl run`
-3. Delete novamente
-4. Crie usando o YAML
-5. Use `port-forward`
-
-Se fizer sem olhar, o conceito está sólido ✅
+```bash
+vim /root/aplicacoes/deployments/my-nginx-hpa.yaml
+```
 
 ---
 
-## 🔜 Próxima aula
+## 8️⃣ Backup dos manifestos atuais (Deployment e HPA)
 
-* Deployments (réplicas)
-* Alta disponibilidade
-* Exposição correta com **Service**
+```bash
+kubectl get deployment my-nginx-app -o yaml \
+  > /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+
+kubectl get hpa my-nginx-app -o yaml \
+  > /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+```
+
+💡 Técnica essencial para **backup e rollback manual**.
+
+---
+
+## 9️⃣ Remover recursos via comandos imperativos
+
+```bash
+kubectl delete deployment my-nginx-app
+kubectl delete hpa my-nginx-app
+```
+
+---
+
+## 🔟 Editar manifestos (versão 2)
+
+### Deployment
+
+```bash
+vim /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+```
+
+* Ajustar:
+
+  * `revisionHistoryLimit: 2`
+  * imagem para `nginx:stable-alpine`
+
+### HPA
+
+```bash
+vim /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+```
+
+* Ajustar:
+
+  * `maxReplicas: 12`
+
+---
+
+## 1️⃣1️⃣ Recriar recursos a partir dos manifestos
+
+```bash
+kubectl apply -f /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+kubectl apply -f /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+```
+
+### Verificar estado
+
+```bash
+kubectl get deployment
+kubectl get rs
+kubectl get hpa
+```
+
+---
+
+## 1️⃣2️⃣ Limpeza do ambiente usando manifestos
+
+```bash
+kubectl delete -f /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
+kubectl delete -f /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+```
+
+### Conferir limpeza
+
+```bash
+kubectl get all
+```
+
+---
+
+## 🧠 Conceitos fixados
+
+* Scale manual altera o campo `replicas`
+* HPA sobrescreve o controle manual
+* HPA trabalha baseado em métricas (CPU)
+* Backup de manifestos é prática profissional
+* Recursos podem ser recriados fielmente via YAML
+
+---
+
+## 🔗 Referências
+
+* HPA – Kubernetes
+* [https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
