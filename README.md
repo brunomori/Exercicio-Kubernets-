@@ -1,94 +1,75 @@
-# Docker básico – Aplicação Olá Mundo com Nginx
+# Aula adaptada – Criando a aplicação **Olá Mundo Container**
 
-Este guia é **curto, repetível e direto**, feito para você **executar várias vezes até fixar o conceito**.
+Esta versão segue **exatamente o conceito da aula**, mas adaptada para:
 
-Objetivo: criar uma **imagem Docker** que serve um HTML simples usando **Nginx**.
+* Ubuntu
+* usuário comum (sem `/root`)
+* repetição fácil para fixar
+
+Você pode executar **linha por linha** sem erro de permissão.
 
 ---
 
-## 1️⃣ Criar a pasta do projeto
+## 🎯 Objetivo
 
-Escolha um local na sua home (exemplo: Área de Trabalho):
+Criar uma aplicação **Olá Mundo** usando **Nginx em container**, construir a imagem e publicar na porta 8080.
 
-```bash
-mkdir -p ~/Área\ de\ Trabalho/app_web
-cd ~/Área\ de\ Trabalho/app_web
+---
+
+## 1️⃣ Criar a estrutura de pastas da aplicação
+
+📌 Na aula original:
+
+```
+/root/aplicacoes/container/olamundo/html
 ```
 
-Conferir onde você está:
+📌 Adaptado para sua realidade:
+
+```bash
+mkdir -p ~/app_container/olamundo/html
+cd ~/app_container/olamundo
+```
+
+Conferir:
 
 ```bash
 pwd
-```
-
----
-
-## 2️⃣ Criar o arquivo HTML
-
-Crie o arquivo:
-
-```bash
-touch index.html
-```
-
-Edite:
-
-```bash
-nano index.html
-```
-
-Conteúdo de exemplo:
-
-```html
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Olá Mundo</title>
-</head>
-<body>
-  <h1>Olá Mundo 🚀</h1>
-</body>
-</html>
-```
-
-Salvar:
-
-* `Ctrl + O` → Enter
-* `Ctrl + X`
-
----
-
-## 3️⃣ Criar a pasta `html`
-
-O Nginx espera os arquivos dentro de `/usr/share/nginx/html`.
-
-Vamos organizar:
-
-```bash
-mkdir html
-mv index.html html/
-```
-
-Conferir estrutura:
-
-```bash
 ls -R
 ```
 
-Resultado esperado:
+---
 
+## 2️⃣ Criar o arquivo `index.html`
+
+📌 Comando adaptado:
+
+```bash
+cat > html/index.html << EOF
+<html>
+ <head>
+  <title>
+   Olá Mundo Container!!!
+  </title>
+ </head>
+ <body style="background-color: blue;">
+  <h1 style="color: white">Olá Mundo Container!!!</h1>
+ </body>
+</html>
+EOF
 ```
-app_web/
-├── html/
-│   └── index.html
+
+Verificar se foi criado corretamente:
+
+```bash
+cat html/index.html
 ```
 
 ---
 
-## 4️⃣ Criar o Dockerfile
+## 3️⃣ Criar o Dockerfile (definição da imagem)
 
-Ainda dentro da pasta do projeto:
+📌 Comando adaptado:
 
 ```bash
 cat > Dockerfile << EOF
@@ -105,13 +86,15 @@ cat Dockerfile
 
 ---
 
-## 5️⃣ Buildar a imagem Docker
+## 4️⃣ Construir a imagem do container
+
+### 🔹 Usando **Docker** (mais comum no Ubuntu)
 
 ```bash
-docker build -t olamundo .
+docker build -t k8s4dev/ola-mundo-container-image:1.0.0 .
 ```
 
-Ver imagens:
+Listar imagens:
 
 ```bash
 docker images
@@ -119,60 +102,112 @@ docker images
 
 ---
 
-## 6️⃣ Rodar o container
+### 🔹 (Opcional) Usando **Podman** (igual à aula)
+
+Se você estiver usando Podman:
 
 ```bash
-docker run -p 8080:80 olamundo
+podman build -t k8s4dev/ola-mundo-container-image:1.0.0 .
 ```
 
-Abra no navegador:
+Listar imagens:
 
 ```bash
-xdg-open http://localhost:8080
-```
-
-Você deve ver o **Olá Mundo**.
-
----
-
-## 7️⃣ Parar o container
-
-No terminal onde ele está rodando:
-
-```bash
-Ctrl + C
+podman image ls
 ```
 
 ---
 
-## 🧠 Conceitos fixados
+## 5️⃣ Executar o container
 
-* 📦 **Imagem**: template imutável (Dockerfile → docker build)
-* ▶️ **Container**: imagem em execução (docker run)
-* 🌐 **Porta**: `8080:80` (máquina → container)
-* 📁 **COPY**: envia arquivos locais para dentro da imagem
+### Docker:
+
+```bash
+docker run --name k8s4dev-ola-mundo-container -d -p 8080:80 k8s4dev/ola-mundo-container-image:1.0.0
+```
+
+### Podman:
+
+```bash
+podman run --name k8s4dev-ola-mundo-container -d -p 8080:80 k8s4dev/ola-mundo-container-image:1.0.0
+```
+
+Verificar se está rodando:
+
+```bash
+docker ps
+# ou
+podman ps
+```
 
 ---
 
-## 🔁 Exercício de repetição (faça sempre)
+## 6️⃣ Acessar a aplicação no navegador
+
+No **mesmo computador**:
+
+```
+http://localhost:8080
+```
+
+Você deve ver:
+
+> **Olá Mundo Container!!!**
+
+---
+
+## 7️⃣ Comandos básicos (fixação)
+
+### Listar containers
+
+```bash
+docker ps
+podman ps
+```
+
+### Parar container
+
+```bash
+docker stop k8s4dev-ola-mundo-container
+podman stop k8s4dev-ola-mundo-container
+```
+
+### Remover container
+
+```bash
+docker rm -f k8s4dev-ola-mundo-container
+podman rm -f k8s4dev-ola-mundo-container
+```
+
+### Limpeza geral (⚠️ cuidado)
+
+```bash
+podman system reset
+```
+
+---
+
+## 🧠 Conceitos que você fixou
+
+* Estrutura de aplicação em container
+* `Dockerfile` como definição da imagem
+* `COPY` levando arquivos para dentro do container
+* Diferença entre **imagem** e **container**
+* Publicação de porta (`8080:80`)
+
+---
+
+## 🔁 Exercício de repetição (ESSENCIAL)
 
 1. Apague tudo:
 
 ```bash
-rm -rf app_web
+rm -rf ~/app_container
 ```
 
-2. Refaça **do zero** sem olhar
-3. Mude o texto do HTML
+2. Refaça **sem copiar**
+3. Mude o HTML
 4. Rebuild a imagem
-5. Rode de novo
+5. Rode novamente
 
-Se conseguir repetir sem erro, o conceito **fixou** ✅
-
----
-
-💡 Próximo passo sugerido:
-
-* Usar `docker run -d`
-* Nomear container (`--name`)
-* Versionar com Git
+Se conseguir fazer sem consultar, **o conceito está sólido** ✅
