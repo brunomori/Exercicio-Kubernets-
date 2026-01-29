@@ -256,3 +256,60 @@ kubectl get all
 
 * HPA – Kubernetes
 * [https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+
+
+# Exercício de Fixação — Scale e Horizontal Pod Autoscaler (HPA)
+
+## Objetivo
+Fixar os conceitos de **scale manual** e **Horizontal Pod Autoscaler (HPA)** em Kubernetes, entendendo quando e como cada um é utilizado.
+
+---
+
+## Parte 1 — Scale Manual
+
+1. Crie um Deployment chamado `nginx-scale` utilizando a imagem `nginx`.
+2. Verifique quantas réplicas o Deployment possui por padrão.
+3. Escale o Deployment para **5 réplicas**.
+4. Liste os Pods e confirme se todas as réplicas estão em execução.
+5. Escale o Deployment novamente para **2 réplicas**.
+6. Verifique o status do Deployment após o scale.
+
+---
+
+## Parte 2 — Horizontal Pod Autoscaler (HPA)
+
+7. Verifique se o **metrics-server** está disponível no cluster.
+8. Crie um HPA para o Deployment `nginx-scale` com as seguintes configurações:
+   - Réplicas mínimas: 1  
+   - Réplicas máximas: 5  
+   - Utilização média de CPU: 50%
+9. Liste os HPAs existentes no cluster.
+10. Observe o status e as métricas do HPA criado.
+
+---
+
+## Parte 3 — Fixação Conceitual
+
+Responda mentalmente ou anote:
+
+11. Qual a diferença entre **scale manual** e **HPA**?
+12. O que acontece se o `metrics-server` não estiver funcionando?
+13. O HPA altera diretamente os Pods ou o Deployment?
+14. O que ocorre se você fizer scale manual em um Deployment que possui HPA ativo?
+
+---
+
+## Limpeza do Ambiente
+
+15. Remova o HPA criado.
+16. Delete o Deployment `nginx-scale`.
+
+---
+
+## Observações
+- O scale manual é útil para ajustes rápidos.
+- O HPA é indicado para ambientes dinâmicos e produção.
+- O HPA depende obrigatoriamente de métricas (metrics-server).
+
+---
+
