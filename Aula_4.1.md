@@ -178,3 +178,69 @@ kubectl get rs
 
 * Kubernetes Deployments
 * [https://kubernetes.io/docs/concepts/workloads/controllers/deployment/](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+
+# Exercício de Fixação — Rollback, Rollout History e Rollout Undo
+
+## Objetivo
+Fixar o uso dos comandos **rollout history** e **rollout undo**, entendendo como visualizar versões e realizar rollback de um Deployment no Kubernetes.
+
+---
+
+## Parte 1 — Preparação
+
+1. Utilize o Deployment existente chamado `my-nginx-app`.
+2. Verifique o status atual do Deployment.
+3. Liste os Pods e os ReplicaSets associados ao Deployment.
+
+---
+
+## Parte 2 — Histórico de Rollout
+
+4. Liste o histórico de versões do Deployment.
+5. Observe o número de revisões existentes.
+6. Identifique a revisão atualmente ativa.
+
+---
+
+## Parte 3 — Simulando uma Alteração
+
+7. Atualize a imagem do container `nginx` para uma nova versão (exemplo: `nginx:latest`).
+8. Aguarde a conclusão do rollout.
+9. Liste novamente o histórico e observe a criação de uma nova revisão.
+
+---
+
+## Parte 4 — Rollback da Aplicação
+
+10. Execute o rollback do Deployment para a **revisão anterior**.
+11. Acompanhe o processo de rollback.
+12. Verifique se os Pods foram recriados.
+13. Confirme qual revisão está ativa após o rollback.
+
+---
+
+## Parte 5 — Rollback para uma Revisão Específica
+
+14. Execute o rollback informando explicitamente uma revisão do histórico.
+15. Verifique novamente o histórico do Deployment.
+16. Observe se uma nova revisão foi criada após o rollback.
+
+---
+
+## Parte 6 — Fixação Conceitual
+
+Responda mentalmente ou anote:
+
+17. Qual a diferença entre `rollout undo` simples e `rollout undo --to-revision`?
+18. O rollback apaga o histórico anterior do Deployment?
+19. Por que o rollback também gera uma nova revisão?
+
+---
+
+## Observações
+- `rollout history` permite auditar mudanças.
+- `rollout undo` facilita a recuperação rápida em caso de falha.
+- Rollback é uma prática essencial em ambientes produtivos.
+
+---
+
