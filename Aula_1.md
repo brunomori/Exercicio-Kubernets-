@@ -18,17 +18,11 @@ Criar uma aplicação **Olá Mundo** usando **Nginx em container**, construir a 
 
 ## 1️⃣ Criar a estrutura de pastas da aplicação
 
-📌 Na aula original:
-
-```
-/root/aplicacoes/container/olamundo/html
-```
 
 📌 Adaptado para sua realidade:
 
 ```bash
 mkdir -p ~/app_container/olamundo/html
-cd ~/app_container/olamundo
 ```
 
 Conferir:
@@ -45,7 +39,11 @@ ls -R
 📌 Comando adaptado:
 
 ```bash
-cat > html/index.html << EOF
+ touch index.html
+```
+
+```bash
+ html/index.html 
 <html>
  <head>
   <title>
@@ -56,7 +54,6 @@ cat > html/index.html << EOF
   <h1 style="color: white">Olá Mundo Container!!!</h1>
  </body>
 </html>
-EOF
 ```
 
 Verificar se foi criado corretamente:
@@ -72,10 +69,13 @@ cat html/index.html
 📌 Comando adaptado:
 
 ```bash
-cat > Dockerfile << EOF
+touch Dockerfile
+```
+Utiliza VIM  para edicação e salvar a atualização do index.html, segue conteudo. 
+
+```bash
 FROM nginx
-COPY html /usr/share/nginx/html
-EOF
+COPY index.html /usr/share/nginx/html/
 ```
 
 Conferir:
@@ -89,7 +89,8 @@ cat Dockerfile
 ## 4️⃣ Construir a imagem do container (Docker)
 
 ```bash
-docker build -t k8s4dev/ola-mundo-container-image:1.0.0 .
+docker build -t nome_da_image .
+
 ```
 
 Listar imagens:
@@ -98,28 +99,12 @@ Listar imagens:
 docker images
 ```
 
----
-
-### 🔹 (Opcional) Usando **Podman** (igual à aula)
-
-Se você estiver usando Podman:
-
-```bash
-podman build -t k8s4dev/ola-mundo-container-image:1.0.0 .
-```
-
-Listar imagens:
-
-```bash
-podman image ls
-```
-
----
 
 ## 5️⃣ Executar o container (Docker)
 
 ```bash
-docker run --name k8s4dev-ola-mundo-container -d -p 8080:80 k8s4dev/ola-mundo-container-image:1.0.0
+docker run -d -p 8080:80 nome_da_image
+
 ```
 
 Verificar se está rodando:
