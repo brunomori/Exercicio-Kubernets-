@@ -2,258 +2,174 @@
 
 Nesta aula entramos no **recurso MAIS usado em produção no Kubernetes**: **Deployment**.
 
-Tudo aqui é a **evolução natural** das aulas anteriores (Pod → ReplicaSet → Deployment).
+Tudo aqui é a **evolução natural** das aulas anteriores:
+
+**Pod → ReplicaSet → Deployment**
 
 Adaptado para:
 
-* Ubuntu
-* usuário comum
-* kubectl (Docker como runtime já configurado)
+- Ubuntu
+- Usuário comum
+- kubectl (Docker como runtime já configurado)
 
 ---
 
 ## 🎯 Objetivo da aula
 
-* Criar um **Deployment**
-* Entender a relação **Deployment → ReplicaSet → Pods**
-* Monitorar **rollout**
-* Ver status da implantação
-* Usar **rollout restart**
-* Trabalhar com histórico de versões
+- Criar um Deployment
+- Entender a relação Deployment → ReplicaSet → Pods
+- Monitorar rollout
+- Ver status da implantação
+- Usar rollout restart
+- Trabalhar com histórico de versões
 
 ---
 
 ## 🧠 Conceito-chave (decora isso)
 
-> **Deployment é o controlador de mais alto nível para aplicações stateless.**
+> Deployment é o controlador de mais alto nível para aplicações stateless.
 
 Ele:
 
-* cria ReplicaSets
-* controla Pods
-* permite rollout, rollback e restart
+- cria ReplicaSets
+- controla Pods
+- permite rollout, rollback e restart
 
-👉 **Em produção você usa Deployment, não Pod nem ReplicaSet direto.**
+Em produção você usa Deployment, não Pod nem ReplicaSet direto.
 
 ---
 
 ## 1️⃣ Pré-configuração (simulando a aula)
 
-Abra **4 terminais**:
+Abra **3 terminais**:
 
 ### Terminal 1 – Monitorar ReplicaSets
 
-```bash
-kubectl get rs -w
-```
+    kubectl get rs -w
 
 ### Terminal 2 – Monitorar Pods
 
-```bash
-kubectl get pods -w
-```
+    kubectl get pods -w
 
 ### Terminal 3 – Execução dos comandos
-
-### Terminal 4 – Apoio (curl / inspeções)
 
 ---
 
 ## 2️⃣ Criar estrutura de pastas
 
-📌 Aula original:
-
-```
-/root/aplicacoes/deployments/
-```
-
-📌 Adaptado:
-
-```bash
-mkdir -p ~/k8s/deployments
-cd ~/k8s/deployments
-```
+    mkdir -p ~/k8s/deployments
+    cd ~/k8s/deployments
 
 ---
 
 ## 3️⃣ Criar o manifesto do Deployment (imperativo)
 
-Vamos gerar o YAML usando o kubectl (boa prática):
+Gerar o YAML usando o kubectl (boa prática):
 
-```bash
-kubectl create deployment my-nginx-app \
-  --image=nginx:1.14.2 \
-  --replicas=3 \
-  --dry-run=client -o yaml > my-nginx-deployment.yaml
-```
+    kubectl create deployment my-nginx-app \
+      --image=nginx:1.14.2 \
+      --replicas=3 \
+      --dry-run=client -o yaml > my-nginx-deployment.yaml
 
-📌 O que esse comando faz:
+Esse comando:
 
-* **create deployment** → cria um Deployment
-* **--image** → imagem do container
-* **--replicas** → quantidade inicial
-* **--dry-run** → não aplica, só gera o YAML
-* **-o yaml** → saída em YAML
+- cria um Deployment
+- define a imagem
+- define a quantidade de réplicas
+- apenas gera o YAML (não aplica no cluster)
 
 ---
 
 ## 4️⃣ Verificar o manifesto criado
 
-```bash
-cat my-nginx-deployment.yaml
-```
+    cat my-nginx-deployment.yaml
 
-📌 Observe:
+Observe:
 
-* `kind: Deployment`
-* `replicas: 3`
-* `template` (mesmo conceito do ReplicaSet)
+- kind: Deployment
+- replicas: 3
+- template → definição dos Pods
 
 ---
 
 ## 5️⃣ Aplicar o Deployment
 
-```bash
-kubectl apply -f my-nginx-deployment.yaml
-```
+    kubectl apply -f my-nginx-deployment.yaml
 
-Observe nos terminais:
+Fluxo criado automaticamente:
 
-* Deployment cria um ReplicaSet
-* ReplicaSet cria os Pods
+Deployment → ReplicaSet → Pods
 
 ---
 
 ## 6️⃣ Verificar o status do Rollout
 
-```bash
-kubectl rollout status deployment/my-nginx-app
-```
-
-✅ Indica se a aplicação foi implantada com sucesso.
+    kubectl rollout status deployment/my-nginx-app
 
 ---
 
 ## 7️⃣ Inspecionar o Deployment
 
-```bash
-kubectl get deployment my-nginx-app
-kubectl get deployment my-nginx-app -o wide
-kubectl get deployment my-nginx-app -o wide --show-labels
-```
+    kubectl get deployment my-nginx-app
+    kubectl get deployment my-nginx-app -o wide
 
 ---
 
 ## 8️⃣ Descrever o Deployment
 
-```bash
-kubectl describe deployment my-nginx-app
-```
+    kubectl describe deployment my-nginx-app
 
-📌 Aqui você vê:
+Aqui você vê:
 
-* eventos
-* replicas
-* estratégia de rollout
+- eventos
+- estado das réplicas
+- ReplicaSet controlado
 
 ---
 
-## 9️⃣ Verificar IPs dos Pods
+## 9️⃣ Histórico de Rollout
 
-```bash
-kubectl get pods -o yaml | grep podIP
-```
-
-📌 Cada Pod tem **seu próprio IP** dentro do cluster.
+    kubectl rollout history deployment my-nginx-app
 
 ---
 
-## 🔟 Verificar versão do Nginx
+## 🔟 Rollout Restart
 
-Escolha um podIP e execute:
+Reiniciar os Pods sem alterar a imagem:
 
-```bash
-curl -i <POD_IP>
-```
+    kubectl rollout restart deployment my-nginx-app
 
-Verifique o header:
+O que acontece:
 
-```
-Server: nginx/1.14.2
-```
-
----
-
-## 1️⃣1️⃣ Histórico de Rollout
-
-```bash
-kubectl rollout history deployment my-nginx-app
-```
-
----
-
-## 1️⃣2️⃣ Anotar causa da mudança
-
-```bash
-kubectl annotate deployment/my-nginx-app \
-  kubernetes.io/change-cause="Deploy OK - Nginx version 1.14.2"
-```
-
-Verificar novamente:
-
-```bash
-kubectl rollout history deployment my-nginx-app
-```
-
----
-
-## 1️⃣3️⃣ Rollout Restart
-
-Reiniciar a aplicação sem mudar a imagem:
-
-```bash
-kubectl rollout restart deployment my-nginx-app
-```
-
-Observe:
-
-* novos Pods sendo criados
-* Pods antigos sendo finalizados
+- novos Pods sobem
+- Pods antigos são finalizados
+- sem downtime
 
 ---
 
 ## 🧠 Conceitos fixados nesta aula
 
-* Deployment é o **controle principal** da aplicação
-* Rollout acompanha a implantação
-* Restart sem downtime
-* Histórico de versões
-* Relação Deployment → RS → Pods
+- Deployment é o padrão em produção
+- ReplicaSet é gerenciado automaticamente
+- Pods são descartáveis
+- Rollout acompanha implantações
+- Restart recria Pods com segurança
+- Hierarquia: Deployment → RS → Pods
 
 ---
 
 ## ⚠️ Observação de mercado
 
-* Nunca use `kubectl run` em produção
-* Nunca gerencie Pod direto
-* **Deployment é padrão**
+- Não gerencie Pods diretamente
+- Não use kubectl run em produção
+- Sempre use Deployment
 
 ---
 
 ## 🔁 Exercício de fixação
 
-1. Crie o Deployment
-2. Observe RS e Pods
-3. Veja rollout status
-4. Faça rollout restart
-5. Consulte o histórico
-
-Se fizer sem olhar, você está **no nível profissional** ✅
-
----
-
-## 🔜 Próxima aula
-
-* Atualização de versão (rollout update)
-* Rollback
-* Estratégias de deployment
+1. Criar um Deployment com 3 réplicas
+2. Monitorar Pods e ReplicaSets
+3. Verificar rollout status
+4. Executar rollout restart
+5. Conferir o histórico
