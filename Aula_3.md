@@ -198,6 +198,22 @@ kubectl get pods
 
 ---
 
+Se sua intenção for PARAR os pods
+
+## 🔻 Escalar para zero
+
+```bash
+kubectl scale rs my-app --replicas=0
+```
+
+Você vai ver todos indo para Terminating e nenhum voltando.
+
+## 🔥 Ou deletar o ReplicaSet
+
+```bash
+kubectl delete rs my-app
+```
+
 ## 🧠 Conceitos fixados nesta aula
 
 * ReplicaSet mantém **quantidade desejada de Pods**
