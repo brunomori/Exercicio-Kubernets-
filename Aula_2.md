@@ -244,6 +244,30 @@ kubectl apply -f ~/k8s/pods/nginx-run-pod.yaml
 4. Crie usando o YAML
 5. Use `port-forward`
 
+🔁 Sequência (ideal para fixar)
+
+Essa é a versão que eu recomendo você repetir até virar automático:
+
+kubectl get nodes
+
+kubectl get pods
+
+kubectl run nginx-run-pod --image=nginx
+
+kubectl get pod nginx-run-pod
+
+kubectl get pod nginx-run-pod -o yaml
+
+kubectl get pod nginx-run-pod -o yaml | grep -i ip
+
+kubectl delete pod nginx-run-pod
+
+Criar/editar nginx-run-pod.yaml
+
+kubectl apply -f ~/k8s/pods/nginx-run-pod.yaml
+
+kubectl get pods
+
 Se fizer sem olhar, o conceito está sólido ✅
 
 ---
