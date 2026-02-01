@@ -147,6 +147,15 @@ O que acontece:
 
 ---
 
+## 🧹 Limpeza do ambiente (refazer a aula do zero)
+
+Ao final da aula, remova o Deployment para poder repetir todo o processo novamente.
+
+### Deletar o Deployment
+
+    kubectl delete deployment my-nginx-app
+
+
 ## 🧠 Conceitos fixados nesta aula
 
 - Deployment é o padrão em produção
