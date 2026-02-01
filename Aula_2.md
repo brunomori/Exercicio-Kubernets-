@@ -5,9 +5,7 @@ Esta aula dá continuidade ao **conceito de containers**, agora no **Kubernetes*
 Adaptado para:
 
 * Ubuntu
-* usuário comum (sem `/root`)
 * Kubernetes local (k3s, kind, minikube, etc.)
-
 ---
 
 ## 🎯 Objetivo da aula
