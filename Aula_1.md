@@ -186,4 +186,17 @@ rm -rf ~/app_container
 4. Rebuild a imagem
 5. Rode novamente
 
+
+🔁 Sequência AJUSTADA (ideal para fixar)
+
+Essa é a versão que eu recomendo você repetir até virar automático:
+
+docker ps -a 
+docker build -t nome_da_image .
+docker ps
+docker run -d -p 8080:80 nome_da_image
+docker stop nome_da_image
+docker rm -f nome_da_image
+
+
 Se conseguir fazer sem consultar, **o conceito está sólido** ✅
