@@ -1,4 +1,4 @@
-# 📘 Aula 4.2 – Deployments
+# 📘 Aula 4.3 – Deployments
 
 ## Scale e Horizontal Pod Autoscaler (HPA)
 
