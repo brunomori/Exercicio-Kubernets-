@@ -1,13 +1,6 @@
-# 🚀 Guia Rápido de Comandos Kubernetes (SRE Júnior)
-
-> Guia **prático, direto e de consulta rápida**, no estilo **README para GitHub**, focado no dia a dia de um **SRE Júnior**.
+# 🚀 Guia Rápido de Comandos Kubernetes 
 
 ---
-
-## 📌 Pré-requisitos
-
-* `kubectl` instalado
-* Acesso a um cluster Kubernetes
 
 Verificar conexão com o cluster:
 
@@ -226,12 +219,9 @@ kubectl get events --sort-by=.metadata.creationTimestamp
 
 ---
 
-## 📎 Dica Final de SRE Júnior
-
 > **Se você sabe observar, descrever e ler logs, você já resolve 70% dos incidentes.**
 
 Esse guia é para **consulta diária**. Conforme evoluir para SRE pleno, você vai automatizar tudo isso.
 
 ---
 
-✅ Pronto para versionar no GitHub como `README.md`.
