@@ -158,11 +158,11 @@ kubectl get all
 ## ⚡ Comandos Essenciais — Criar, Deletar e Conferir Deployment
 
 ```bash
-kubectl create deployment nginx-scale --image=nginx
+kubectl create deployment meu-deploy --image=nginx
 
 ```
 ```bash
-kubectl delete deployment nginx-scale
+kubectl delete deployment meu-deploy
 ```
 ```bash
 kubectl get deployment
