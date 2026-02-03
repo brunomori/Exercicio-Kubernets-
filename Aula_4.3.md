@@ -4,95 +4,59 @@
 
 ---
 
-## 🎯 Objetivo da aula
+## 🎯 Objetivo
 
 * Entender **scale manual (scale in / scale out)**
-* Explorar o **Horizontal Pod Autoscaler (HPA)**
-* Compreender precedência entre **scale manual x HPA**
-* Gerar e reutilizar **manifestos a partir de objetos existentes**
-* Simular um fluxo real de **backup, edição e recriação de recursos**
+* Entender o **Horizontal Pod Autoscaler (HPA)**
+* Saber quem manda: **scale manual x HPA**
+* Praticar **backup, edição e recriação** de recursos via YAML
 
 ---
 
 ## 🔧 Pré-requisitos
 
-* Deployment `my-nginx-app` criado nas aulas anteriores
-* Kubernetes em execução
+* Deployment `my-nginx-app`
+* Cluster Kubernetes ativo
 * `kubectl` configurado
 
 ---
 
-## 1️⃣ Preparação e monitoramento
-
-Organize os terminais e inicie o monitoramento.
-
-### Pods
+## 1️⃣ Monitoramento
 
 ```bash
 kubectl get pods
 kubectl get pods -w
-```
-
-### ReplicaSets
-
-```bash
 kubectl get rs
 kubectl get rs -w
-```
-
-### Status do Deployment
-
-```bash
 kubectl rollout status deployment/my-nginx-app
 ```
 
-📌 **Estado esperado**
-
-* Deployment com 3 réplicas
-* Pods em estado `Running`
+📌 Esperado: Deployment com **3 réplicas** em `Running`.
 
 ---
 
-## 2️⃣ Scale manual – Scale Out (3 → 5)
+## 2️⃣ Scale manual
+
+### Scale Out (3 → 5)
 
 ```bash
 kubectl scale deployment/my-nginx-app --replicas=5
-```
-
-### Verificar Pods
-
-```bash
 kubectl get pods
 ```
 
-📌 **Resultado esperado**
-
-* 5 Pods em execução
-
----
-
-## 3️⃣ Scale manual – Scale In (5 → 1)
+### Scale In (5 → 1)
 
 ```bash
 kubectl scale deployment/my-nginx-app --replicas=1
-```
-
-### Verificar Pods e Deployment
-
-```bash
 kubectl get pods
 kubectl get deployment my-nginx-app
 ```
 
-📌 **Resultado esperado**
-
-* Apenas 1 Pod ativo
+📌 Scale manual altera apenas o campo `replicas` do Deployment.
 
 ---
 
-## 4️⃣ Criando o Horizontal Pod Autoscaler (HPA)
-
-O HPA controla automaticamente o número de réplicas com base no uso de CPU.
+## 3️⃣ Criar HPA
 
 ```bash
 kubectl autoscale deployment/my-nginx-app \
@@ -101,41 +65,24 @@ kubectl autoscale deployment/my-nginx-app \
   --cpu-percent=90
 ```
 
-📌 **Comportamento esperado**
-
-* O Deployment passa a manter **mínimo de 3 Pods**
-* Pode escalar automaticamente até **5 Pods**
+📌 O HPA garante **mínimo 3 Pods** e escala até **5** conforme CPU.
 
 ---
 
-## 5️⃣ Testando precedência do HPA
-
-### Tentar escalar manualmente para 4
+## 4️⃣ Precedência do HPA
 
 ```bash
 kubectl scale deployment/my-nginx-app --replicas=4
-```
-
-➡️ O HPA ajusta novamente para o mínimo configurado.
-
-### Tentar escalar para 1
-
-```bash
 kubectl scale deployment/my-nginx-app --replicas=1
 ```
 
-📌 **Resultado**
+📌 Resultado: o HPA ignora o scale manual e mantém **3 réplicas**.
 
-* Nada acontece
-* O HPA mantém **3 réplicas**
-
-💡 **Conclusão:**
-
-> Quando existe HPA, ele tem **precedência total** sobre o campo `replicas` do Deployment.
+💡 **Regra:** HPA ativo **sempre sobrescreve** o scale manual.
 
 ---
 
-## 6️⃣ Verificando o HPA
+## 5️⃣ Verificar HPA
 
 ```bash
 kubectl get hpa my-nginx-app
@@ -143,7 +90,7 @@ kubectl get hpa my-nginx-app
 
 ---
 
-## 7️⃣ Gerar manifesto do HPA (dry-run)
+## 6️⃣ Gerar e salvar manifestos
 
 ```bash
 kubectl autoscale deployment/my-nginx-app \
@@ -152,31 +99,16 @@ kubectl autoscale deployment/my-nginx-app \
   --cpu-percent=90 \
   --dry-run=client -o yaml \
   > /root/aplicacoes/deployments/my-nginx-hpa.yaml
-```
 
-### Ver manifesto
-
-```bash
-vim /root/aplicacoes/deployments/my-nginx-hpa.yaml
-```
-
----
-
-## 8️⃣ Backup dos manifestos atuais (Deployment e HPA)
-
-```bash
 kubectl get deployment my-nginx-app -o yaml \
   > /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
-
-kubectl get hpa my-nginx-app -o yaml \
-  > /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
 ```
 
-💡 Técnica essencial para **backup e rollback manual**.
+📌 Prática profissional de **backup e versionamento**.
 
 ---
 
-## 9️⃣ Remover recursos via comandos imperativos
+## 7️⃣ Remover recursos
 
 ```bash
 kubectl delete deployment my-nginx-app
@@ -185,39 +117,25 @@ kubectl delete hpa my-nginx-app
 
 ---
 
-## 🔟 Editar manifestos (versão 2)
+## 8️⃣ Editar manifestos
 
-### Deployment
+**Deployment** (`my-nginx-deployment-v2.yaml`):
 
-```bash
-vim /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
-```
+* `revisionHistoryLimit: 2`
+* imagem: `nginx:stable-alpine`
 
-* Ajustar:
+**HPA** (`my-nginx-hpa.yaml`):
 
-  * `revisionHistoryLimit: 2`
-  * imagem para `nginx:stable-alpine`
-
-### HPA
-
-```bash
-vim /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
-```
-
-* Ajustar:
-
-  * `maxReplicas: 12`
+* `maxReplicas: 12`
 
 ---
 
-## 1️⃣1️⃣ Recriar recursos a partir dos manifestos
+## 9️⃣ Recriar recursos
 
 ```bash
 kubectl apply -f /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
-kubectl apply -f /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
+kubectl apply -f /root/aplicacoes/deployments/my-nginx-hpa.yaml
 ```
-
-### Verificar estado
 
 ```bash
 kubectl get deployment
@@ -227,89 +145,37 @@ kubectl get hpa
 
 ---
 
-## 1️⃣2️⃣ Limpeza do ambiente usando manifestos
+## 🔟 Limpeza final
 
 ```bash
 kubectl delete -f /root/aplicacoes/deployments/my-nginx-deployment-v2.yaml
-kubectl delete -f /root/aplicacoes/deployments/my-nginx-hpa-v2.yaml
-```
-
-### Conferir limpeza
-
-```bash
+kubectl delete -f /root/aplicacoes/deployments/my-nginx-hpa.yaml
 kubectl get all
 ```
 
 ---
 
-## 🧠 Conceitos fixados
+## 🧠 Conceitos-chave
 
-* Scale manual altera o campo `replicas`
-* HPA sobrescreve o controle manual
-* HPA trabalha baseado em métricas (CPU)
-* Backup de manifestos é prática profissional
-* Recursos podem ser recriados fielmente via YAML
-
----
-
-## 🔗 Referências
-
-* HPA – Kubernetes
-* [https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
-
-
-# Exercício de Fixação — Scale e Horizontal Pod Autoscaler (HPA)
-
-## Objetivo
-Fixar os conceitos de **scale manual** e **Horizontal Pod Autoscaler (HPA)** em Kubernetes, entendendo quando e como cada um é utilizado.
+* Scale manual = ajuste direto de `replicas`
+* HPA controla replicas automaticamente
+* HPA tem prioridade sobre scale manual
+* YAML permite backup, recriação e rollback
 
 ---
 
-## Parte 1 — Scale Manual
+## 📝 Exercício rápido
 
-1. Crie um Deployment chamado `nginx-scale` utilizando a imagem `nginx`.
-2. Verifique quantas réplicas o Deployment possui por padrão.
-3. Escale o Deployment para **5 réplicas**.
-4. Liste os Pods e confirme se todas as réplicas estão em execução.
-5. Escale o Deployment novamente para **2 réplicas**.
-6. Verifique o status do Deployment após o scale.
+1. Crie um Deployment `nginx-scale` com imagem `nginx`
+2. Escale manualmente para 5 e depois para 2 réplicas
+3. Crie um HPA:
 
----
-
-## Parte 2 — Horizontal Pod Autoscaler (HPA)
-
-7. Verifique se o **metrics-server** está disponível no cluster.
-8. Crie um HPA para o Deployment `nginx-scale` com as seguintes configurações:
-   - Réplicas mínimas: 1  
-   - Réplicas máximas: 5  
-   - Utilização média de CPU: 50%
-9. Liste os HPAs existentes no cluster.
-10. Observe o status e as métricas do HPA criado.
+   * min: 1 | max: 5 | CPU: 50%
+4. Tente fazer scale manual com HPA ativo
+5. Explique: **quem manda e por quê**
 
 ---
 
-## Parte 3 — Fixação Conceitual
+## 🔗 Referência
 
-Responda mentalmente ou anote:
-
-11. Qual a diferença entre **scale manual** e **HPA**?
-12. O que acontece se o `metrics-server` não estiver funcionando?
-13. O HPA altera diretamente os Pods ou o Deployment?
-14. O que ocorre se você fizer scale manual em um Deployment que possui HPA ativo?
-
----
-
-## Limpeza do Ambiente
-
-15. Remova o HPA criado.
-16. Delete o Deployment `nginx-scale`.
-
----
-
-## Observações
-- O scale manual é útil para ajustes rápidos.
-- O HPA é indicado para ambientes dinâmicos e produção.
-- O HPA depende obrigatoriamente de métricas (metrics-server).
-
----
-
+* Kubernetes Docs — Horizontal Pod Autoscaler
