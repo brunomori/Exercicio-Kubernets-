@@ -1,204 +1,237 @@
-# Aula1  – Criando a aplicação **Olá Mundo Container**
+# 🚀 Guia Rápido de Comandos Kubernetes (SRE Júnior)
 
-Esta versão segue **exatamente o conceito da aula**, mas adaptada para:
-
-* Ubuntu
-* usuário comum (sem `/root`)
-* repetição fácil para fixar
-
-Você pode executar **linha por linha** sem erro de permissão.
+> Guia **prático, direto e de consulta rápida**, no estilo **README para GitHub**, focado no dia a dia de um **SRE Júnior**.
 
 ---
 
-## 🎯 Objetivo
+## 📌 Pré-requisitos
 
-Criar uma aplicação **Olá Mundo** usando **Nginx em container**, construir a imagem e publicar na porta 8080.
+* `kubectl` instalado
+* Acesso a um cluster Kubernetes
 
----
-
-## 1️⃣ Criar a estrutura de pastas da aplicação
-
-📌 Na aula original:
-
-```
-/root/aplicacoes/container/olamundo/html
-```
-
-📌 Adaptado para sua realidade:
+Verificar conexão com o cluster:
 
 ```bash
-mkdir -p ~/app_container/olamundo/html
-cd ~/app_container/olamundo
-```
-
-Conferir:
-
-```bash
-pwd
-ls -R
+kubectl cluster-info
+kubectl get nodes
 ```
 
 ---
 
-## 2️⃣ Criar o arquivo `index.html`
+## 🧱 Conceitos Essenciais (bem direto)
 
-📌 Comando adaptado:
+* **Cluster** → Conjunto de máquinas que rodam o Kubernetes
+* **Node** → Máquina (VM ou física)
+* **Pod** → Menor unidade (1 ou mais containers)
+* **Deployment** → Gerencia Pods (escala, restart, updates)
+* **Service** → Expõe Pods na rede
+* **Namespace** → Isolamento lógico
+
+---
+
+## 📦 Comandos Básicos de Observação (90% do uso)
+
+### Ver recursos
 
 ```bash
-cat > html/index.html << EOF
-<html>
- <head>
-  <title>
-   Olá Mundo Container!!!
-  </title>
- </head>
- <body style="background-color: blue;">
-  <h1 style="color: white">Olá Mundo Container!!!</h1>
- </body>
-</html>
-EOF
+kubectl get pods
+kubectl get deployments
+kubectl get services
+kubectl get nodes
 ```
 
-Verificar se foi criado corretamente:
+Com mais detalhes:
 
 ```bash
-cat html/index.html
+kubectl get pods -o wide
+```
+
+Por namespace:
+
+```bash
+kubectl get pods -n kube-system
 ```
 
 ---
 
-## 3️⃣ Criar o Dockerfile (definição da imagem)
+## 🔍 Inspeção e Diagnóstico
 
-📌 Comando adaptado:
+### Descrever recursos (DEBUG)
 
 ```bash
-cat > Dockerfile << EOF
-FROM nginx
-COPY html /usr/share/nginx/html
-EOF
+kubectl describe pod <nome-do-pod>
+kubectl describe deployment <nome>
 ```
 
-Conferir:
+### Logs
 
 ```bash
-cat Dockerfile
+kubectl logs <pod>
+```
+
+Container específico:
+
+```bash
+kubectl logs <pod> -c <container>
+```
+
+Logs em tempo real:
+
+```bash
+kubectl logs -f <pod>
 ```
 
 ---
 
-## 4️⃣ Construir a imagem do container (Docker)
+## 🛠️ Execução dentro do Pod
+
+Entrar no container:
 
 ```bash
-docker build -t k8s4dev/ola-mundo-container-image:1.0.0 .
+kubectl exec -it <pod> -- /bin/sh
 ```
 
-Listar imagens:
+Se tiver bash:
 
 ```bash
-docker images
+kubectl exec -it <pod> -- /bin/bash
 ```
 
 ---
 
-### 🔹 (Opcional) Usando **Podman** (igual à aula)
+## 📄 Aplicar e Gerenciar Manifests
 
-Se você estiver usando Podman:
+### Criar / Atualizar recursos
 
 ```bash
-podman build -t k8s4dev/ola-mundo-container-image:1.0.0 .
+kubectl apply -f arquivo.yaml
 ```
 
-Listar imagens:
+Aplicar uma pasta inteira:
 
 ```bash
-podman image ls
+kubectl apply -f ./k8s/
+```
+
+### Remover recursos
+
+```bash
+kubectl delete -f arquivo.yaml
 ```
 
 ---
 
-## 5️⃣ Executar o container (Docker)
+## 🔁 Deployments (Escala e Controle)
+
+### Ver deployments
 
 ```bash
-docker run --name k8s4dev-ola-mundo-container -d -p 8080:80 k8s4dev/ola-mundo-container-image:1.0.0
+kubectl get deployments
 ```
 
-Verificar se está rodando:
+### Escala manual
 
 ```bash
-docker ps
+kubectl scale deployment <nome> --replicas=3
+```
+
+### Ver rollout
+
+```bash
+kubectl rollout status deployment <nome>
+```
+
+### Rollback
+
+```bash
+kubectl rollout undo deployment <nome>
 ```
 
 ---
 
-## 6️⃣ Acessar a aplicação no navegador
+## 🌐 Services
 
-No **mesmo computador**:
+Ver services:
 
+```bash
+kubectl get svc
 ```
-http://localhost:8080
-```
 
-Você deve ver:
+Tipos comuns:
 
-> **Olá Mundo Container!!!**
+* `ClusterIP` (interno)
+* `NodePort` (exposição simples)
+* `LoadBalancer` (cloud)
 
 ---
 
-## 7️⃣ Comandos básicos (fixação)
+## 📂 Namespaces
 
-### Listar containers
+Listar:
 
 ```bash
-docker ps
+kubectl get ns
 ```
 
-### Listar imagens
+Usar namespace específico:
 
 ```bash
-docker images
+kubectl get pods -n <namespace>
 ```
 
-### Parar container
+Definir namespace padrão:
 
 ```bash
-docker stop k8s4dev-ola-mundo-container
-```
-
-### Remover container
-
-```bash
-docker rm -f k8s4dev-ola-mundo-container
-```
-
-### Remover imagem
-
-```bash
-docker rmi k8s4dev/ola-mundo-container-image:1.0.0
+kubectl config set-context --current --namespace=<namespace>
 ```
 
 ---
 
-## 🧠 Conceitos que você fixou
+## ⚠️ Comandos de Emergência (SRE raiz 😅)
 
-* Estrutura de aplicação em container
-* `Dockerfile` como definição da imagem
-* `COPY` levando arquivos para dentro da imagem
-* Diferença entre **imagem** e **container**
-* Publicação de porta (`8080:80`)
+### Deletar pod travado (ele recria sozinho se tiver Deployment)
+
+```bash
+kubectl delete pod <pod>
+```
+
+### Forçar delete
+
+```bash
+kubectl delete pod <pod> --grace-period=0 --force
+```
 
 ---
 
-## 🔁 Exercício de repetição (ESSENCIAL)
+## 🧪 Checklist Rápido de Incidente
 
-1. Apague tudo:
+1. `kubectl get pods`
+2. `kubectl describe pod <pod>`
+3. `kubectl logs <pod>`
+4. Ver eventos:
 
 ```bash
-rm -rf ~/app_container
+kubectl get events --sort-by=.metadata.creationTimestamp
 ```
 
-2. Refaça **sem copiar**
-3. Mude o HTML
-4. Rebuild a imagem
-5. Rode novamente
+---
 
-Se conseguir fazer sem consultar, **o conceito está sólido** ✅
+## 🎯 Exercício de Fixação (rápido)
+
+1. Liste todos os Pods
+2. Escolha um Pod e veja os logs
+3. Entre no Pod com `exec`
+4. Escale um Deployment para 2 réplicas
+5. Delete um Pod e veja ele recriar
+
+---
+
+## 📎 Dica Final de SRE Júnior
+
+> **Se você sabe observar, descrever e ler logs, você já resolve 70% dos incidentes.**
+
+Esse guia é para **consulta diária**. Conforme evoluir para SRE pleno, você vai automatizar tudo isso.
+
+---
+
+✅ Pronto para versionar no GitHub como `README.md`.
