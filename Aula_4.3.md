@@ -155,6 +155,20 @@ kubectl get all
 
 ---
 
+## ⚡ Comandos Essenciais — Criar, Deletar e Conferir Deployment
+
+```bash
+kubectl create deployment nginx-scale --image=nginx
+
+```
+```bash
+kubectl delete deployment nginx-scale
+```
+```bash
+kubectl get deployment
+```
+
+
 ## 🧠 Conceitos-chave
 
 * Scale manual = ajuste direto de `replicas`
