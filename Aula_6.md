@@ -1,227 +1,189 @@
-# 🚀 Guia Rápido de Comandos Kubernetes 
+# 📘 Aula 6 – Networking no Kubernetes (Services + DNS)
+
+## 🎯 Objetivo da Aula
+- Entender **como Pods se comunicam**
+- Aprender **por que Service é essencial**
+- Conhecer os principais tipos de `Service`
+- Entender **DNS no Kubernetes**
+- Criar um **modelo mental de troubleshooting de rede**
 
 ---
 
-Verificar conexão com o cluster:
+## 🔧 Conceito Essencial (sem rodeio)
 
-```bash
-kubectl cluster-info
-kubectl get nodes
-```
+- Pods **têm IP**, mas são **efêmeros**
+- IP de Pod **muda**
+- **Nunca** acesse Pods diretamente em produção
+- `Service` é quem garante **acesso estável**
+- DNS conecta **nome → Service → Pods**
 
----
-
-## 🧱 Conceitos Essenciais (bem direto)
-
-* **Cluster** → Conjunto de máquinas que rodam o Kubernetes
-* **Node** → Máquina (VM ou física)
-* **Pod** → Menor unidade (1 ou mais containers)
-* **Deployment** → Gerencia Pods (escala, restart, updates)
-* **Service** → Expõe Pods na rede
-* **Namespace** → Isolamento lógico
+👉 Networking no Kubernetes = **Service + DNS**
 
 ---
 
-## 📦 Comandos Básicos de Observação (90% do uso)
+## 🧠 Modelo Mental (guarde isso)
 
-### Ver recursos
-
-```bash
-kubectl get pods
-kubectl get deployments
-kubectl get services
-kubectl get nodes
-```
-
-Com mais detalhes:
-
-```bash
-kubectl get pods -o wide
-```
-
-Por namespace:
-
-```bash
-kubectl get pods -n kube-system
-```
+Usuário / App  
+→ Service (nome fixo)  
+→ Pods (IP muda, Service resolve)
 
 ---
 
-## 🔍 Inspeção e Diagnóstico
+## 1️⃣ Comunicação entre Pods
 
-### Descrever recursos (DEBUG)
+Todo Pod recebe um IP próprio:
 
-```bash
-kubectl describe pod <nome-do-pod>
-kubectl describe deployment <nome>
-```
+    kubectl get pods -o wide
 
-### Logs
-
-```bash
-kubectl logs <pod>
-```
-
-Container específico:
-
-```bash
-kubectl logs <pod> -c <container>
-```
-
-Logs em tempo real:
-
-```bash
-kubectl logs -f <pod>
-```
+📌 Pods conseguem se comunicar **diretamente por IP**, mesmo em nodes diferentes.  
+⚠️ Mas **não é prática recomendada** usar IP de Pod.
 
 ---
 
-## 🛠️ Execução dentro do Pod
+## 2️⃣ O que é um Service?
 
-Entrar no container:
+`Service` é um recurso que:
+- Cria um **endpoint estável**
+- Faz **load balance** entre Pods
+- Resolve o problema do IP dinâmico
 
-```bash
-kubectl exec -it <pod> -- /bin/sh
-```
-
-Se tiver bash:
-
-```bash
-kubectl exec -it <pod> -- /bin/bash
-```
+👉 Service **não roda container**, ele só aponta para Pods via **labels**.
 
 ---
 
-## 📄 Aplicar e Gerenciar Manifests
+## 3️⃣ Tipos de Service (o que importa agora)
 
-### Criar / Atualizar recursos
+### 🔹 ClusterIP (padrão)
+- Acesso **interno ao cluster**
+- Mais usado
+- Base de tudo
 
-```bash
-kubectl apply -f arquivo.yaml
-```
+### 🔹 NodePort
+- Expõe porta do node
+- Pouco usado em produção
+- Mais comum em estudo/lab
 
-Aplicar uma pasta inteira:
+### 🔹 LoadBalancer
+- Cria IP externo (cloud)
+- Depende do provedor (AWS, GCP, etc)
 
-```bash
-kubectl apply -f ./k8s/
-```
-
-### Remover recursos
-
-```bash
-kubectl delete -f arquivo.yaml
-```
+📌 Para SRE Jr: **ClusterIP é obrigatório dominar**.
 
 ---
 
-## 🔁 Deployments (Escala e Controle)
+## 4️⃣ Criando um Service ClusterIP (exemplo)
 
-### Ver deployments
+Supondo Pods com label `app=nginx`:
 
-```bash
-kubectl get deployments
-```
+    kubectl expose pod nginx --port=80 --name=nginx-svc
 
-### Escala manual
+Verificar o Service criado:
 
-```bash
-kubectl scale deployment <nome> --replicas=3
-```
+    kubectl get svc
+    kubectl describe svc nginx-svc
 
-### Ver rollout
-
-```bash
-kubectl rollout status deployment <nome>
-```
-
-### Rollback
-
-```bash
-kubectl rollout undo deployment <nome>
-```
+📌 Observe:
+- `Type: ClusterIP`
+- `Endpoints` apontando para os Pods
 
 ---
 
-## 🌐 Services
+## 5️⃣ Service funciona por Labels
 
-Ver services:
+Se o Service não encontra Pods, **não é bug de rede**, é label errada.
 
-```bash
-kubectl get svc
-```
+Ver labels do Pod:
 
-Tipos comuns:
+    kubectl get pod nginx --show-labels
 
-* `ClusterIP` (interno)
-* `NodePort` (exposição simples)
-* `LoadBalancer` (cloud)
+Ver selector do Service:
 
----
+    kubectl describe svc nginx-svc
 
-## 📂 Namespaces
-
-Listar:
-
-```bash
-kubectl get ns
-```
-
-Usar namespace específico:
-
-```bash
-kubectl get pods -n <namespace>
-```
-
-Definir namespace padrão:
-
-```bash
-kubectl config set-context --current --namespace=<namespace>
-```
+👉 Selector precisa **bater exatamente** com a label.
 
 ---
 
-## ⚠️ Comandos de Emergência (SRE raiz 😅)
+## 6️⃣ DNS no Kubernetes (CoreDNS)
 
-### Deletar pod travado (ele recria sozinho se tiver Deployment)
+Todo Service gera automaticamente um nome DNS.
 
-```bash
-kubectl delete pod <pod>
-```
+Formato padrão:
 
-### Forçar delete
+    <service>.<namespace>.svc.cluster.local
 
-```bash
-kubectl delete pod <pod> --grace-period=0 --force
-```
+Exemplo:
 
----
+    nginx-svc.default.svc.cluster.local
 
-## 🧪 Checklist Rápido de Incidente
-
-1. `kubectl get pods`
-2. `kubectl describe pod <pod>`
-3. `kubectl logs <pod>`
-4. Ver eventos:
-
-```bash
-kubectl get events --sort-by=.metadata.creationTimestamp
-```
+Dentro do cluster, **use o nome**, nunca IP.
 
 ---
 
-## 🎯 Exercício de Fixação (rápido)
+## 7️⃣ Testando DNS na prática
 
-1. Liste todos os Pods
-2. Escolha um Pod e veja os logs
-3. Entre no Pod com `exec`
-4. Escale um Deployment para 2 réplicas
-5. Delete um Pod e veja ele recriar
+Criar um Pod temporário para teste:
+
+    kubectl run dns-test --image=busybox -- sleep 3600
+
+Entrar no Pod:
+
+    kubectl exec -it dns-test -- sh
+
+Testar resolução DNS:
+
+    nslookup nginx-svc
+
+📌 Se resolve o nome, o DNS está funcionando.
 
 ---
 
-> **Se você sabe observar, descrever e ler logs, você já resolve 70% dos incidentes.**
+## 8️⃣ Ordem correta de troubleshooting de rede
 
-Esse guia é para **consulta diária**. Conforme evoluir para SRE pleno, você vai automatizar tudo isso.
+Sempre siga essa ordem:
+
+1. Namespace certo?
+2. Pod está `Running`?
+3. Pod tem IP?
+4. Service existe?
+5. Service tem `Endpoints`?
+6. Labels batem?
+7. DNS resolve?
+
+👉 80% dos problemas acabam aqui.
 
 ---
 
+## 9️⃣ Erros comuns (e reais)
+
+- Olhar Pod no namespace errado
+- Service sem endpoints
+- Label errada no Deployment
+- Acessar IP do Pod direto
+- Esquecer que Service é interno por padrão
+
+---
+
+## 🧪 Exercício de Fixação (Essencial)
+
+1. Crie um Pod nginx
+2. Verifique o IP do Pod
+3. Crie um Service ClusterIP para ele
+4. Liste os Services
+5. Verifique os Endpoints do Service
+6. Crie um Pod busybox para teste
+7. Resolva o nome DNS do Service
+8. Delete os recursos criados
+
+Comandos de referência:
+
+    kubectl run nginx --image=nginx
+    kubectl get pods -o wide
+    kubectl expose pod nginx --port=80 --name=nginx-svc
+    kubectl get svc
+    kubectl describe svc nginx-svc
+    kubectl run dns-test --image=busybox -- sleep 3600
+    kubectl exec -it dns-test -- sh
+    nslookup nginx-svc
+
+🔥 Se você entende por que **Service existe** e **nunca usa IP de Pod**, você entendeu networking básico no Kubernetes.
