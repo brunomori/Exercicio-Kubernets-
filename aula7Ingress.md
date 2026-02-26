@@ -1,45 +1,50 @@
-# 🚦 Guia Prático: Ingress no Kubernetes com NGINX
+# 🚦 Ingress no Kubernetes -- Guia Prático (Versão SRE Jr)
 
-Este guia cobre desde a instalação do **Ingress Controller** até a
-criação do seu primeiro recurso de **Ingress**, com foco total em
-prática.
-
-------------------------------------------------------------------------
-
-## 📌 Índice
-
-1.  O que é Ingress?
-2.  Pré-requisitos
-3.  Passo 1: Instalar o NGINX Ingress Controller
-4.  Passo 2: Criar as Aplicações (Deployments & Services)
-5.  Passo 3: Criar um Ingress Simples
-6.  Teste e Validação
-7.  Exercício Prático
+Guia direto ao ponto para entender, instalar e operar Ingress com
+mentalidade de SRE.
 
 ------------------------------------------------------------------------
 
-# O que é Ingress?
+# 🎯 Objetivo
 
-O **Ingress** funciona como uma porta principal inteligente que:
-
--   Recebe tráfego HTTP/HTTPS externo
--   Analisa host ou caminho da URL
--   Direciona para o Service correto
-
-Sem um Ingress Controller instalado, o recurso Ingress não funciona.
+Ao final deste guia você será capaz de:
+a
+-   Entender o fluxo real de uma requisição HTTP no cluster
+-   Instalar o NGINX Ingress Controlleraa
+-   Expor aplicações externamente
+-   Diagnosticar erros comuns (404, 503, ADDRESS vazio)
 
 ------------------------------------------------------------------------
 
-# Pré-requisitos
+# 🧠 Conceito Técnico (Sem Metáfora)
+
+Fluxo real de requisição:
+
+Client → DNS → Ingress Controller → Service → Endpoint → Pod
+
+## Diferença Importante
+
+-   **Ingress** → Recurso de configuração (regras)
+-   **Ingress Controller** → Implementação que executa as regras
+-   **Sem controller, Ingress não funciona**
+
+Verifique controllers disponíveis:
+
+``` bash
+kubectl get ingressclass
+```
+
+------------------------------------------------------------------------
+
+# 📋 Pré-requisitos
 
 -   Cluster Kubernetes funcionando
 -   kubectl configurado
--   Acesso root (ou sudo)
--   IP da máquina acessível (exemplo: 192.168.0.32)
+-   IP acessível (exemplo: 192.168.0.32)
 
 ------------------------------------------------------------------------
 
-# Passo 1: Instalar o NGINX Ingress Controller
+# 🚀 Passo 1 -- Instalar NGINX Ingress Controller (Baremetal)
 
 ## Criar diretório
 
@@ -47,13 +52,13 @@ Sem um Ingress Controller instalado, o recurso Ingress não funciona.
 sudo mkdir -p /root/aplicacoes/ingress
 ```
 
-## Baixar manifesto
+## Baixar manifesto oficial
 
 ``` bash
 curl -L https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml -o /root/aplicacoes/ingress/nginx-ingress-controller.yaml
 ```
 
-## Ajustar externalIPs
+## Ajustar externalIPs (LAB)
 
 Edite o Service ingress-nginx-controller:
 
@@ -63,6 +68,9 @@ spec:
   externalIPs:
   - 192.168.0.32
 ```
+
+⚠ Ambiente de laboratório.\
+Em cloud normalmente usamos `Service type LoadBalancer`.
 
 ## Aplicar
 
@@ -79,29 +87,23 @@ kubectl get svc -n ingress-nginx
 
 ------------------------------------------------------------------------
 
-# Configurar DNS Local
+# 🌐 Configurar DNS Local
 
-Adicionar no /etc/hosts ou no arquivo hosts do Windows:
+Adicionar no arquivo hosts:
 
     192.168.0.32   my-kubernetes.com.br
 
 ------------------------------------------------------------------------
 
-# Passo 2: Criar Aplicações
+# 🏗 Passo 2 -- Criar Aplicações
 
-## Criar diretório
-
-``` bash
-sudo mkdir -p /root/aplicacoes/ingress/ecommerce
-```
-
-## Aplicar manifesto ecommerce.yaml
+Aplicar seu arquivo ecommerce.yaml:
 
 ``` bash
-kubectl apply -f /root/aplicacoes/ingress/ecommerce/ecommerce.yaml
+kubectl apply -f ecommerce.yaml
 ```
 
-## Validar
+Validar:
 
 ``` bash
 kubectl get pods -n ecommerce
@@ -110,9 +112,7 @@ kubectl get svc -n ecommerce
 
 ------------------------------------------------------------------------
 
-# Passo 3: Criar Ingress
-
-## Criar arquivo ingress-pay.yaml
+# 🔥 Passo 3 -- Criar Ingress Simples
 
 ``` yaml
 apiVersion: networking.k8s.io/v1
@@ -129,37 +129,79 @@ spec:
         number: 8080
 ```
 
-## Aplicar
+Aplicar:
 
 ``` bash
 kubectl apply -f ingress-pay.yaml
 ```
 
-## Verificar
+Verificar:
 
 ``` bash
 kubectl get ingress -n ecommerce -w
 ```
 
-## Descrever
-
-``` bash
-kubectl describe ingress ingress-pay -n ecommerce
-```
-
-------------------------------------------------------------------------
-
-# Teste
-
-Acesse no navegador:
+Testar no navegador:
 
 http://my-kubernetes.com.br
 
 ------------------------------------------------------------------------
 
-# Exercício Prático
+# 🔍 Troubleshooting Essencial (Mentalidade SRE)
 
-1.  Alterar o Ingress para apontar para o serviço video.
-2.  Aplicar novamente.
-3.  Testar no navegador.
-4.  Opcional: usar kubectl edit ingress.
+## ADDRESS não aparece
+
+``` bash
+kubectl get svc -n ingress-nginx
+```
+
+Verifique se o Service tem externalIP.
+
+------------------------------------------------------------------------
+
+## 404 Not Found
+
+Verifique:
+
+``` bash
+kubectl describe ingress -n ecommerce
+kubectl get svc -n ecommerce
+```
+
+Possíveis causas:
+
+-   Namespace errado
+-   Service não existe
+-   Selector incorreto
+
+------------------------------------------------------------------------
+
+## 503 Service Unavailable
+
+``` bash
+kubectl get endpoints -n ecommerce
+```
+
+Se não houver endpoints, o Pod não está sendo selecionado.
+
+------------------------------------------------------------------------
+
+# 📈 O que você aprendeu
+
+-   Fluxo HTTP dentro do Kubernetes
+-   Diferença entre Ingress e Controller
+-   Exposição externa em ambiente baremetal
+-   Diagnóstico básico de erros
+
+------------------------------------------------------------------------
+
+# 🚀 Próximo Nível
+
+Para fechar Ingress em nível SRE Jr:
+
+-   Path-based routing
+-   Host-based routing
+-   TLS básico
+-   Logs do controller
+
+Ingress deixa de ser configuração e vira operação.
