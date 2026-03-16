@@ -1,7 +1,7 @@
 
 # 🚦 Kubernetes Probes — Guia Prático (Startup, Liveness e Readiness)
 
-Guia prático focado em **Kubernetes Probes** no padrão de estudo **SRE Jr**.
+Guia prático focado em **Kubernetes Probes** no padrão de estudo **SRE**.
 
 Este material cobre apenas:
 
@@ -9,7 +9,7 @@ Este material cobre apenas:
 - LivenessProbe
 - ReadinessProbe
 
-⚠️ Não confundir com **PV / PVC**, que já foram estudados anteriormente.
+
 
 ---
 
