@@ -1,4 +1,4 @@
-# 🔐 Kubernetes c --- Guia Prático (SRE Jr)
+# 🔐 Kubernetes c --- Guia Prático 
 
 Guia prático para aprender **ConfigMaps e Secrets no Kubernetes** usando
 uma aplicação real que conecta em um **banco MySQL**.
