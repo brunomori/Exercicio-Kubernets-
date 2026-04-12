@@ -1,4 +1,4 @@
-# 🚀 Kubernetes — Cola Rápida SRE Jr | Bruno Mori
+# 🚀 Kubernetes —| Bruno Mori
 
 > Referência de consulta rápida baseada nas aulas práticas do repositório.
 > Comandos reais, YAMLs prontos para usar, troubleshooting e flags úteis.
