@@ -5,6 +5,31 @@
 
 ---
 
+## Trilha prática de estudos
+
+Este repositório reúne anotações de laboratório e referências de Kubernetes. Os exemplos são educacionais; não representam uma plataforma de produção validada.
+
+| Etapa | Material |
+| --- | --- |
+| Containers | [Aula 1](Aula_1_Container.md) |
+| Pods | [Aula 2](Aula_2_Pods.md) |
+| ReplicaSets | [Aula 3](Aula_3_ReplicaSet.md) |
+| Deployments | [Aula 4](Aula_4_Deployments.md) |
+| Rollback | [Aula 4.1](Aula_4.1_Deploy_Rollback.md) |
+| Rollout | [Aula 4.2](Aula_4.2.Deplo_rollout.md) |
+| Autoscaling | [Aula 4.3](Aula_4.3_Deploy_Autoscaler.md) |
+| Namespaces | [Aula 5](Aula_5_Namespaces.md) |
+| Networking | [Aula 6](Aula_6_Networking.md) · [Complemento](Aula_6.1%20Networking.md) |
+| Ingress | [Aula 7](Aula_7_Ingress.md) |
+| Configuração | [Aula 8](Aula_8_ConfigMaps_Secrets.md) |
+| Persistência | [Aula 8.1](Aula_8.1_Persistent_Volumes.md) |
+| Aula 9 | [Material](Aula_9_Pobres.md) |
+| Helm | [Aula 10](Aula_10_heml.md) |
+| Consulta | [Comandos](Comandos.md) |
+
+Antes de executar exemplos, confirme o contexto e namespace do cluster e utilize um ambiente de laboratório. Revise versões de imagens, permissões e comandos destrutivos.
+
+
 ## 📑 Índice
 
 | # | Tema |
