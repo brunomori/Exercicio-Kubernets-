@@ -1,0 +1,11 @@
+# Local credentials and generated configuration
+.kube/
+kubeconfig
+*.kubeconfig
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.tfstate
+*.tfstate.*
